@@ -11,7 +11,7 @@
 
         <key type="b" name="yaru-panel">
             <default>true</default>
-            <summary>Normal-weighted fonts</summary>
+            <summary>Normal-weigthed fonts</summary>
         </key>
 
         <key type="b" name="accent-panel">
@@ -32,6 +32,11 @@
         <key type="b" name="scroll-panel">
             <default>true</default>
             <summary>Scroll on panel to change workspace</summary>
+        </key>
+
+        <key type="b" name="show-power-profile">
+            <default>true</default>
+            <summary>Show power profile indicator</summary>
         </key>
 
         <key type="b" name="show-user-id">
@@ -84,6 +89,11 @@
             <summary>Move tasks to the center</summary>
         </key>
 
+        <key type="b" name="dynamic-task-display">
+            <default>false</default>
+            <summary>Show window titles only when visible tasks contain duplicate applications</summary>
+        </key>
+
         <key type="b" name="show-window-icon">
             <default>true</default>
             <summary>Show window icon inside task button</summary>
@@ -102,6 +112,11 @@
         <key type="b" name="show-active-workspace">
             <default>true</default>
             <summary>Show windows on active workspace only</summary>
+        </key>
+
+        <key type="b" name="show-panel-monitor-only">
+            <default>false</default>
+            <summary>Show windows on the panel monitor only</summary>
         </key>
 
         <key type="b" name="show-focused-window">
@@ -134,11 +149,6 @@
             <summary>Monochrome icon</summary>
         </key>
 
-        <key type="b" name="force-bold-tasks">
-            <default>false</default>
-            <summary>Force bold font weight in tasks</summary>
-        </key>
-
         <key type="i" name="button-width">
             <default>256</default>
             <summary>Task button natural width</summary>
@@ -147,11 +157,6 @@
         <key type="b" name="animate-on-close">
             <default>true</default>
             <summary>Animate on close</summary>
-        </key>
-
-        <key type="b" name="multi-monitor">
-            <default>true</default>
-            <summary>Show a task panel on each monitor</summary>
         </key>
 
     </schema>

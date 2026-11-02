@@ -8,140 +8,288 @@ import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/
 
 export default class TasksInPanelPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
-        const settings = this.getSettings();
+        window._settings = this.getSettings();
 
-        window.add(this._buildGlobalPage(settings));
-        window.add(this._buildIndicatorsPage(settings));
-        window.add(this._buildTasksPage(settings));
-    }
+        /* Global */
 
-    _addSwitchRow(group, settings, key, title, subtitle) {
-        const row = new Adw.SwitchRow({ title, subtitle: subtitle ?? '' });
-        group.add(row);
-        settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
-        return row;
-    }
-
-    _addSpinRow(group, settings, key, title, adjustment, subtitle) {
-        const row = new Adw.SpinRow({ title, subtitle: subtitle ?? '', adjustment });
-        group.add(row);
-        settings.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT);
-        return row;
-    }
-
-    _buildColorRow(settings) {
-        const row = new Adw.ActionRow({ title: 'Custom background color' });
-
-        const colorButton = new Gtk.ColorDialogButton({
-            valign: Gtk.Align.CENTER,
-            dialog: new Gtk.ColorDialog({ with_alpha: true }),
-        });
-
-        const rgba = new Gdk.RGBA();
-        rgba.parse(settings.get_string('background-color'));
-        colorButton.rgba = rgba;
-
-        colorButton.connect('notify::rgba',
-            () => settings.set_string('background-color', colorButton.rgba.to_string()));
-
-        row.add_suffix(colorButton);
-        row.activatable_widget = colorButton;
-
-        return row;
-    }
-
-    _buildGlobalPage(settings) {
-        const page = new Adw.PreferencesPage({
+        const pageGlobal = new Adw.PreferencesPage({
             title: 'Global',
             icon_name: 'view-list-symbolic',
         });
+        window.add(pageGlobal);
 
-        const group = new Adw.PreferencesGroup();
-        page.add(group);
+        const groupGlobal = new Adw.PreferencesGroup();
+        pageGlobal.add(groupGlobal);
 
-        this._addSwitchRow(group, settings, 'light-style', 'Light style mode',
-            'GNOME Shell follows the system dark/light setting.');
-        this._addSwitchRow(group, settings, 'yaru-panel', 'Use normal font weight in the panel');
-        this._addSwitchRow(group, settings, 'accent-panel', 'Use accent color',
-            'Panel background uses the GNOME accent color.');
-        this._addSwitchRow(group, settings, 'use-background-color', 'Use custom background color');
+        const lightStyle = new Adw.SwitchRow({
+            title: 'Light style mode',
+            subtitle: 'GNOME Shell items follow dark/light style toggle.',
+        });
+        groupGlobal.add(lightStyle);
+        window._settings.bind('light-style', lightStyle, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        group.add(this._buildColorRow(settings));
+        const yaruPanel = new Adw.SwitchRow({
+            title: 'Normal-weighted fonts',
+        });
+        groupGlobal.add(yaruPanel);
+        window._settings.bind('yaru-panel', yaruPanel, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        this._addSwitchRow(group, settings, 'scroll-panel', 'Scroll on the panel to switch workspace');
-        this._addSwitchRow(group, settings, 'multi-monitor', 'Multi-monitor support',
-            'A task panel on each secondary monitor.\nTasks follow their window\'s monitor.');
+        const accentPanel = new Adw.SwitchRow({
+            title: 'Use accent color',
+            subtitle: 'Background color is based on GNOME accent color.',
+        });
+        groupGlobal.add(accentPanel);
+        window._settings.bind('accent-panel', accentPanel, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        return page;
-    }
+        const useBackgroundColor = new Adw.SwitchRow({
+            title: 'Use custom background color',
+        });
+        groupGlobal.add(useBackgroundColor);
+        window._settings.bind('use-background-color', useBackgroundColor, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-    _buildIndicatorsPage(settings) {
-        const page = new Adw.PreferencesPage({
+        const backgroundColor = new Adw.ActionRow({
+            title: 'Custom background color',
+        });
+        groupGlobal.add(backgroundColor);
+
+        const colorButton = new Gtk.ColorButton({
+            valign: Gtk.Align.CENTER,
+            use_alpha: true,
+        });
+
+        const colorString = window._settings.get_string('background-color');
+        const rgba = new Gdk.RGBA();
+        rgba.parse(colorString);
+        colorButton.set_rgba(rgba);
+
+        colorButton.connect('color-set', () => {
+            const newColor = colorButton.get_rgba();
+            const colorString = newColor.to_string();
+            window._settings.set_string('background-color', colorString);
+        });
+
+        backgroundColor.add_suffix(colorButton);
+        backgroundColor.activatable_widget = colorButton;
+
+        const scrollPanel = new Adw.SwitchRow({
+            title: 'Scroll on panel to switch workspace',
+        });
+        groupGlobal.add(scrollPanel);
+        window._settings.bind('scroll-panel', scrollPanel, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+
+        /* Indicators */
+
+        const pageIndicators = new Adw.PreferencesPage({
             title: 'Indicators',
             icon_name: 'view-list-symbolic',
         });
+        window.add(pageIndicators);
 
-        const group = new Adw.PreferencesGroup();
-        page.add(group);
+        const groupIndicators = new Adw.PreferencesGroup();
+        pageIndicators.add(groupIndicators);
 
-        this._addSwitchRow(group, settings, 'show-user-id', 'Show user name');
-        this._addSwitchRow(group, settings, 'show-show-desktop', 'Show desktop button',
-            'Minimizes all windows when at least one is visible.\nRestores all windows when they are all minimized.');
-        this._addSwitchRow(group, settings, 'move-date', 'Move the date menu to the right');
-        this._addSwitchRow(group, settings, 'show-activities', 'Show activities button');
-        this._addSwitchRow(group, settings, 'show-workspaces-bar', 'Show workspaces bar');
-        this._addSwitchRow(group, settings, 'show-plus-minus', 'Show +/- to add/remove workspace',
-            'Hidden when GNOME\'s dynamic workspaces option is active.\nMinus removes the active workspace.');
-        this._addSwitchRow(group, settings, 'show-favorites-menu', 'Show favorites menu button');
-        this._addSwitchRow(group, settings, 'show-recent-apps-menu', 'Show recent applications menu button');
+        const showPowerProfile = new Adw.SwitchRow({
+            title: 'Show power profile indicator',
+            subtitle: 'Scroll to change power profile.',
+        });
+        groupIndicators.add(showPowerProfile);
+        window._settings.bind('show-power-profile', showPowerProfile, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        this._addSpinRow(group, settings, 'recent-apps-list-length',
-            'Maximum number of recent applications',
-            new Gtk.Adjustment({ lower: 1, upper: 20, step_increment: 1 }));
+        const showUserId = new Adw.SwitchRow({
+            title: 'Show user name',
+        });
+        groupIndicators.add(showUserId);
+        window._settings.bind('show-user-id', showUserId, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        this._addSwitchRow(group, settings, 'center-tasks', 'Move tasks to the center',
-            'Tasks are aligned to the left by default.');
+        const showShowDesktop = new Adw.SwitchRow({
+            title: 'Show show desktop button',
+            subtitle: 'Minimize all windows if at least one window is not minimized.\nUnminimize all windows if all windows are minimized.',
+        });
+        groupIndicators.add(showShowDesktop);
+        window._settings.bind('show-show-desktop', showShowDesktop, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        return page;
-    }
+        const moveDate = new Adw.SwitchRow({
+            title: 'Move date menu button to the right',
+        });
+        groupIndicators.add(moveDate);
+        window._settings.bind('move-date', moveDate, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-    _buildTasksPage(settings) {
-        const page = new Adw.PreferencesPage({
+        const showActivities = new Adw.SwitchRow({
+            title: 'Show activities indicator',
+        });
+        groupIndicators.add(showActivities);
+        window._settings.bind('show-activities', showActivities, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const showWorkspacesBar = new Adw.SwitchRow({
+            title: 'Show workspaces bar',
+        });
+        groupIndicators.add(showWorkspacesBar);
+        window._settings.bind('show-workspaces-bar', showWorkspacesBar, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const showPlusMinus = new Adw.SwitchRow({
+            title: 'Show +/- to add/remove workspace',
+            subtitle: 'Not displayed if dynamic workspaces GNOME setting is active.\nMinus removes the active workspace.',
+        });
+        groupIndicators.add(showPlusMinus);
+        window._settings.bind('show-plus-minus', showPlusMinus, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const showFavoritesMenu = new Adw.SwitchRow({
+            title: 'Show favorites menu button',
+        });
+        groupIndicators.add(showFavoritesMenu);
+        window._settings.bind('show-favorites-menu', showFavoritesMenu, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const showRecentAppsMenu = new Adw.SwitchRow({
+            title: 'Show recent applications menu button',
+        });
+        groupIndicators.add(showRecentAppsMenu);
+        window._settings.bind('show-recent-apps-menu', showRecentAppsMenu, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const adjustmentRecentAppsListMaxLength = new Gtk.Adjustment({
+            lower: 1,
+            upper: 20,
+            step_increment: 1,
+        });
+
+        const recentAppsListMaxLength = new Adw.SpinRow({
+            title: 'Recent applications list maximum length',
+            adjustment: adjustmentRecentAppsListMaxLength,
+        });
+        groupIndicators.add(recentAppsListMaxLength);
+        window._settings.bind('recent-apps-list-length', recentAppsListMaxLength, 'value', Gio.SettingsBindFlags.DEFAULT);
+
+        const centerTasks = new Adw.SwitchRow({
+            title: 'Move tasks to the center',
+            subtitle: 'Tasks are by default located at the left.',
+        });
+        groupIndicators.add(centerTasks);
+        window._settings.bind('center-tasks', centerTasks, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+
+        /* Tasks */
+
+        const pageTasks = new Adw.PreferencesPage({
             title: 'Tasks',
             icon_name: 'view-list-symbolic',
         });
+        window.add(pageTasks);
 
-        const group = new Adw.PreferencesGroup();
-        page.add(group);
+        const groupTasks = new Adw.PreferencesGroup();
+        pageTasks.add(groupTasks);
 
-        this._addSwitchRow(group, settings, 'show-window-icon', 'Show window icon');
-        this._addSwitchRow(group, settings, 'show-window-title', 'Show window title');
-        this._addSwitchRow(group, settings, 'show-window-app', 'Show application name');
-        this._addSwitchRow(group, settings, 'force-bold-tasks', 'Force bold font weight in tasks',
-            'Overrides the panel\'s normal font weight option.');
-        this._addSwitchRow(group, settings, 'show-active-workspace', 'Show on active workspace only');
-        this._addSwitchRow(group, settings, 'show-focused-window', 'Show focused window only',
-            'Left-click opens the app menu instead of toggling the window.');
-        this._addSwitchRow(group, settings, 'group-windows', 'Group by app',
-            'Only the topmost window of each app is shown.\nOther windows are available from the app menu.');
-        this._addSwitchRow(group, settings, 'hover-raise-window', 'Raise window on hover');
+        const dynamicTaskDisplay = new Adw.SwitchRow({
+            title: 'Dynamic task display',
+            subtitle: 'Show icons only while visible tasks are separate apps.\nAdd all window titles when one app has multiple visible tasks.',
+        });
+        groupTasks.add(dynamicTaskDisplay);
+        window._settings.bind('dynamic-task-display', dynamicTaskDisplay, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        this._addSpinRow(group, settings, 'hover-delay',
-            'Hover delay before raising window (ms)',
-            new Gtk.Adjustment({ lower: 0, upper: 1000, step_increment: 50 }));
+        const showWindowIcon = new Adw.SwitchRow({
+            title: 'Show window icon',
+        });
+        groupTasks.add(showWindowIcon);
+        window._settings.bind('show-window-icon', showWindowIcon, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        this._addSwitchRow(group, settings, 'undecorated-task-buttons', 'Undecorated buttons',
-            'Unfocused buttons are dimmed.');
-        this._addSwitchRow(group, settings, 'desaturate-icon', 'Monochrome icon',
-            'Some apps do have a symbolic icon.');
+        const showWindowTitle = new Adw.SwitchRow({
+            title: 'Show window title',
+        });
+        groupTasks.add(showWindowTitle);
+        window._settings.bind('show-window-title', showWindowTitle, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        this._addSpinRow(group, settings, 'button-width',
-            'Task button natural width (px)',
-            new Gtk.Adjustment({ lower: -1, upper: 999, step_increment: 10 }),
-            'Reduced if the available width is insufficient.\nSet to -1 to fit content.');
+        const showAppName = new Adw.SwitchRow({
+            title: 'Show application name',
+        });
+        groupTasks.add(showAppName);
+        window._settings.bind('show-window-app', showAppName, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        this._addSwitchRow(group, settings, 'animate-on-close', 'Animate on close');
+        const updateFixedDisplaySensitivity = () => {
+            const sensitive = !dynamicTaskDisplay.active;
+            showWindowIcon.sensitive = sensitive;
+            showWindowTitle.sensitive = sensitive;
+            showAppName.sensitive = sensitive;
+        };
+        dynamicTaskDisplay.connect('notify::active', updateFixedDisplaySensitivity);
+        updateFixedDisplaySensitivity();
 
-        return page;
+        const showOnlyActiveWorkspace = new Adw.SwitchRow({
+            title: 'Show on active workspace only',
+        });
+        groupTasks.add(showOnlyActiveWorkspace);
+        window._settings.bind('show-active-workspace', showOnlyActiveWorkspace, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const showPanelMonitorOnly = new Adw.SwitchRow({
+            title: 'Show on panel monitor only',
+            subtitle: 'Hide tasks for windows on other monitors. Works together with the active workspace filter.',
+        });
+        groupTasks.add(showPanelMonitorOnly);
+        window._settings.bind('show-panel-monitor-only', showPanelMonitorOnly, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const showFocusedWindow = new Adw.SwitchRow({
+            title: 'Show focused window only',
+            subtitle: 'Left-click does not toggle window, it opens app menu.',
+        });
+        groupTasks.add(showFocusedWindow);
+        window._settings.bind('show-focused-window', showFocusedWindow, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const groupWindows = new Adw.SwitchRow({
+            title: 'Group by app',
+            subtitle: 'Top app window is shown.\nOther windows can be accessed from the app menu.',
+        });
+        groupTasks.add(groupWindows);
+        window._settings.bind('group-windows', groupWindows, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const hoverRaiseWindow = new Adw.SwitchRow({
+            title: 'Raise window on hover',
+        });
+        groupTasks.add(hoverRaiseWindow);
+        window._settings.bind('hover-raise-window', hoverRaiseWindow, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const adjustmentRaiseWindowDelay = new Gtk.Adjustment({
+            lower: 0,
+            upper: 1000,
+            step_increment: 50,
+        });
+
+        const raiseWindowDelay = new Adw.SpinRow({
+            title: 'Raise window on hover delay (ms)',
+            adjustment: adjustmentRaiseWindowDelay,
+        });
+        groupTasks.add(raiseWindowDelay);
+        window._settings.bind('hover-delay', raiseWindowDelay, 'value', Gio.SettingsBindFlags.DEFAULT);
+
+        const undecoratedButton = new Adw.SwitchRow({
+            title: 'Undecorated button',
+            subtitle: 'Dim opacity if unfocused.',
+        });
+        groupTasks.add(undecoratedButton);
+        window._settings.bind('undecorated-task-buttons', undecoratedButton, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const desaturateIcon = new Adw.SwitchRow({
+            title: 'Monochrome icon',
+            subtitle: 'Some apps do not have a symbolic icon, so simply monochrome here.',
+        });
+        groupTasks.add(desaturateIcon);
+        window._settings.bind('desaturate-icon', desaturateIcon, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const adjustmentButtonWidth = new Gtk.Adjustment({
+            lower: -1,
+            upper: 999,
+            step_increment: 10,
+        });
+
+        const buttonWidth = new Adw.SpinRow({
+            title: 'Task button natural width (px)',
+            subtitle: 'Will be reduced if the available width is insufficient.\nSet -1 for fitted width.',
+            adjustment: adjustmentButtonWidth,
+        });
+        groupTasks.add(buttonWidth);
+        window._settings.bind('button-width', buttonWidth, 'value', Gio.SettingsBindFlags.DEFAULT);
+
+        const animateOnClose = new Adw.SwitchRow({
+            title: 'Animate on close',
+        });
+        groupTasks.add(animateOnClose);
+        window._settings.bind('animate-on-close', animateOnClose, 'active', Gio.SettingsBindFlags.DEFAULT);
     }
 }

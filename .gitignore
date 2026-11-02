@@ -1,0 +1,7 @@
+schemas/gschemas.compiled
+.DS_Store
+*~
+
+dist/
+__pycache__/
+*.pyc
