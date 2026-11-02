@@ -1,7 +1,9 @@
 name: Historical Stable release
 on:
   push:
+    branches: [main]
     tags: [legacy-stable-container-r3]
+    paths: [.github/workflows/historical-release.yml, tools/package_legacy.py]
   workflow_dispatch:
 permissions:
   contents: write
