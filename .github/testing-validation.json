@@ -8,7 +8,12 @@
       "-s",
       "tests",
       "-v"
+    ],
+    [
+      "node",
+      "--test",
+      "tests/policy.test.mjs"
     ]
   ],
-  "generic_package": true
+  "generic_package": false
 }

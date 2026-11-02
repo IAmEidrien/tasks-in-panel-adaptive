@@ -1,0 +1,19 @@
+/* Task/container styling only. No rules target the global panel. */
+.tip-container {
+  -natural-hpadding: 0px;
+  -minimum-hpadding: 0px;
+  padding: 0;
+  border-radius: 8px;
+}
+.tip-task { padding: 0 6px; border-radius: 6px; }
+.tip-task:active { background-color: rgba(127,127,127,0.12); }
+.tip-task:hover, .tip-task:focus { background-color: rgba(127,127,127,0.25); }
+.tip-task StLabel { margin: 0 5px; }
+.tip-preview-cards { spacing: 12px; }
+.tip-preview-card { spacing: 8px; }
+.tip-preview-header { spacing: 8px; }
+.tip-preview-title { max-width: 200px; }
+.tip-preview-title StLabel { text-overflow: ellipsis; }
+.tip-preview-image { border-radius: 8px; padding: 4px; }
+.tip-preview-title:focus, .tip-preview-image:focus { background-color: rgba(127,127,127,0.2); }
+.tip-preview-close { padding: 4px; border-radius: 99px; }

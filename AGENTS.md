@@ -1,26 +1,34 @@
 # Tasks in Panel Adaptive
 
-Public fork of fthx/tasks-in-panel. Preserve upstream ancestry, copyright and
-GPLv3 terms; see LICENSING.md. Credit Eidrien for fork maintenance.
+Public fork of fthx/tasks-in-panel, maintained by Eidrien. Preserve upstream
+ancestry, copyright and GPLv3 obligations. Independent original modules may use
+MIT where compatible; see LICENSING.md. Never credit account profile names.
 
-The migration baseline is Stable Container R3, version 5903, UUID
-`tasks-in-panel@fthx`. Do not mistake restored legacy code for current upstream.
-`legacy-stable-container-r3` is immutable; legacy-build.json records its runtime
-hashes. Do not update that manifest to make a different build look historical.
-The distinct Adaptive identity and feature redesign belong to a later update.
+Keep this extension focused on panel tasks. Container styling and scrolling must
+stay inside TIP-A's actors. Do not add global panel styles, indicator management,
+date-menu relocation or power controls. Task buttons remain flat. Preferences
+hide irrelevant controls rather than leaving disabled clutter.
 
-Publish future feature work to persistent testing, not main. Preserve the
-72-hour quiet period, successful-CI gates, do-not-merge pause, merge commits
-and branch retention. Public automation text describes repository policy.
-Independent original work prefers MIT where compatible, but upstream-derived
-extension code and existing attribution retain their GPLv3 obligations.
+Identity: tasks-in-panel-adaptive@eidrien.local; settings schema and path use
+org.gnome.shell.extensions.tasks-in-panel-adaptive. The compact original schema
+exists only for one-time import of explicit task preferences. Do not import
+unrelated global settings or overwrite existing Adaptive values.
 
-No personal themes, settings, private source history or account profile names.
-Keep the flat Gitpulsar layout and existing settings usable during migration.
-Do not copy .git directories through installation helpers or overwrite an
-installed Git checkout. A remote URL change is not a pull between unrelated
-private/public histories; clone a new checkout and retain a backup instead.
+Runtime stays at repository root for Git-managed installations. Never copy .git
+through installers or overwrite installed Git checkouts. Do not commit personal
+themes, settings, generated schemas, screenshots or native runtime output.
 
-Run python3 .github/scripts/validate.py. These are syntax/schema/package and
-promotion-policy checks, not native GNOME compatibility testing. Declare new
-GNOME versions only after the relevant native checks in the feature update.
+Run make check. Use tests/native in disposable GNOME sessions for actor lifecycle,
+input and API changes; document exact versions and inferred checks honestly in
+TESTING.md. Never equate static CI with live GNOME compatibility testing. Keep
+preview clones, signal handlers, timeouts and menus cleaned up on disable.
+
+Publish feature work to persistent testing, not main. Preserve the 72-hour quiet
+period, current-head CI gates, do-not-merge pause, merge commits and branch
+retention. Keep existing release tags immutable. Public documentation describes
+current product behavior without private repository history.
+
+Version policy: use a whole release number for feature progress and a point
+release for pure fixes/polish. Once testing has a pending release number, further
+commits retain it unless a point release must become a feature release. Metadata
+version remains the integer required by GNOME; version-name is the public label.
