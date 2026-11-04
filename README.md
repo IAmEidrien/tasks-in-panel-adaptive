@@ -21,7 +21,9 @@ respects the workspace and monitor filters. Focused-window-only display is also
 available.
 
 Buttons have a flat appearance, with feedback for the active window, pointer
-hover and keyboard focus. Optional monochrome icons and closing animations are
+hover and keyboard focus. Icon-only tasks have extra horizontal padding. The
+outer container uses a faint neutral hover tint without button press effects or
+animated transitions. Optional monochrome icons and closing animations are
 available. **Maximum task width** caps each button in logical pixels; **−1**
 means no configured maximum. Short titles retain their natural width, and the
 available panel space and theme's minimum button size still apply.
@@ -44,7 +46,8 @@ and Raise share one delay setting, initially **300 ms**. None hides that setting
 Raise temporarily brings a window forward without focusing it and restores the
 previous stacking when the pointer leaves.
 
-Previews show live thumbnails without changing window focus. Move into a preview
+Previews show live thumbnails without changing window focus. Titles ellipsize
+inside compact cards, with 3:2 close buttons that stay independent of title length. Move into a preview
 to select a window or use its close button. Grouped applications show multiple
 cards, with horizontal scrolling when needed. A minimized window has a labeled
 placeholder: displaying a preview never unminimizes it. Escape dismisses a preview during keyboard navigation in the panel.

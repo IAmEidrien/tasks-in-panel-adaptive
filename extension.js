@@ -76,6 +76,8 @@ const Task = GObject.registerClass(class Task extends St.Button {
         const name = !o.dynamic && o.app;
         this.icon.visible = icon;
         this.titleLabel.visible = title || name;
+        if (!title && !name) this.add_style_class_name('tip-task-icon-only');
+        else this.remove_style_class_name('tip-task-icon-only');
         this.titleLabel.text = [title ? this.window.title || 'Untitled window' : '', name ? app?.get_name() : ''].filter(Boolean).join(' — ');
         this.accessible_name = this.window.title || app?.get_name() || 'Window';
         // St CSS max-width limits content; account for theme padding/borders
@@ -187,7 +189,10 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         this.tasks = new Map();
         this.closed = new WeakSet();
         this.can_focus = false;
+        // Retain PanelMenu registration, without its button/theme feedback.
+        this.remove_style_class_name('panel-button');
         this.add_style_class_name('tip-container');
+        this.track_hover = true;
         this.box = new St.BoxLayout({y_expand: true});
         this.add_child(this.box);
         this.preview = new Preview();

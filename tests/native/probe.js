@@ -18,6 +18,14 @@ export default class Probe extends Extension {
         for(let n=0;n<300&&Main.layoutManager._startingUp;n++)await wait(100);
         Main.overview.hide();
         await wait(1500);
+        const themeVariant=GLib.getenv('TEST_THEME');
+        if(themeVariant) {
+            const bytes=Gio.resources_lookup_data(`/org/gnome/shell/theme/gnome-shell-${themeVariant}.css`,0);
+            GLib.file_set_contents(`${root}/test-theme.css`,bytes.toArray());
+            Main.setThemeStylesheet(`${root}/test-theme.css`);Main.loadTheme();
+        }
+        if(GLib.getenv('TEST_TEXT_SCALE'))new Gio.Settings({schema_id:'org.gnome.desktop.interface'}).set_double('text-scaling-factor',Number(GLib.getenv('TEST_TEXT_SCALE')));
+        await wait(300);
         const panelStyle=Main.panel.style, panelClasses=Main.panel.style_class;
         const dateParent=Main.panel.statusArea.dateMenu.container.get_parent();
         const statusKeys=Object.keys(Main.panel.statusArea);
@@ -27,7 +35,7 @@ export default class Probe extends Extension {
         check(info.state===1,`enabled: ${info.error}`);
         const ext=info.stateObj, bar=ext._bar, s=ext.settings;
         const scale=St.ThemeContext.get_for_stage(global.stage).scale_factor;
-        for(const [app,title] of [['A','TIP A1'],['A','TIP A2 — a long window title for testing maximum width and ellipsization'],['B','TIP B1']]) {
+        for(const [app,title] of [['A','TIP A1'],['A','TIP A2 — '+ 'a long window title for testing maximum width and ellipsization '.repeat(12)],['B','TIP B1']]) {
             Gio.Subprocess.new(['gjs','-m',`${root}/client.js`,`org.eidrien.TipTest${app}`,title],Gio.SubprocessFlags.NONE);
             await wait(550);
         }
@@ -42,6 +50,7 @@ export default class Probe extends Extension {
         check(inCreationOrder(),'initial tasks follow window creation order');
         check(s.get_boolean('middle-click-close'),'middle click defaults to closing windows');
         s.set_boolean('middle-click-close',false);
+        check(!bar.has_style_class_name('panel-button'),'outer container has no panel-button styling');
         check(Object.keys(Main.panel.statusArea).filter(k=>!statusKeys.includes(k)).length===1,'one status-area container only');
         check(shown().every(t=>t.titleLabel.visible),'duplicate apps show all titles');
         const a1=shown().find(t=>t.window.title==='TIP A1'), a2=shown().find(t=>t.window.title.startsWith('TIP A2')), b=shown().find(t=>t.window.title==='TIP B1');
@@ -64,6 +73,9 @@ export default class Probe extends Extension {
         GLib.file_set_contents(`${root}/hover-state.json`,JSON.stringify({hover:a1.hover,preview:bar.preview.visible,menu:a1.menu.isOpen,pointer:global.get_pointer(),taskPos:a1.get_transformed_position(),taskSize:a1.get_transformed_size(),options:bar.options,overview:Main.overview.visible,starting:Main.layoutManager._startingUp,focus:global.display.focus_window?.title,shown:Main.overview._shown,animating:Main.overview._animationInProgress}));
         await screenshot('hover-state');
         check(a1.hover&&bar.preview.visible,'real pointer opens preview after delay');
+        const hoverColor=a1.get_theme_node().get_background_color();
+        check(!a1.get_theme_node().get_box_shadow(),'task hover has no native inset fill');
+        check(hoverColor.red===127&&hoverColor.green===127&&hoverColor.alpha<=32,'task hover uses restrained neutral tint over panel theme');
         const previewWindow=a1.window;
         check(global.display.focus_window===focusBeforeHover,'preview does not focus source window');
         await screenshot('preview');
@@ -100,7 +112,17 @@ export default class Probe extends Extension {
         s.set_boolean('group-windows',true);s.set_string('hover-action','preview');await wait(200);
         check(shown().length===2&&shown().every(t=>!t.titleLabel.visible),'grouping uses compact representatives');
         const grouped=shown().find(t=>t.app.get_id().includes('TestA'));move(800,500);await wait(200);await hover(grouped);
-        check(bar.preview.cards.get_n_children()===2,'group preview includes both matching windows');await screenshot('grouped-preview');
+        check(bar.preview.cards.get_n_children()===2,'group preview includes both matching windows');
+        check(grouped.get_transformed_size()[0]>=44*scale,'icon-only tasks have a comfortable target');
+        await screenshot('grouped-geometry');
+        GLib.file_set_contents(`${root}/geometry.json`,JSON.stringify(bar.preview.cards.get_children().map(c=>({card:c.get_transformed_size(),header:c.get_first_child().get_transformed_size(),title:c.get_first_child().get_first_child().get_transformed_size(),close:c.get_first_child().get_last_child().get_transformed_size()}))));
+        for(const card of bar.preview.cards.get_children()) {
+            const header=card.get_first_child(),title=header.get_first_child(),close=header.get_last_child();
+            const [cw,ch]=close.get_transformed_size();
+            check(cw/ch>=1.4&&cw/ch<=1.6,'preview close button keeps 3:2 shape');
+            check(title.get_transformed_size()[0]<=200*scale&&card.get_transformed_size()[0]<=256*scale,'preview titles stay within compact cards');
+        }
+        await screenshot('grouped-preview');
         bar.preview.close();s.set_boolean('group-windows',false);await wait(200);
         a2.window.change_workspace_by_index(1,false);await wait(300);
         check(shown().length===2&&shown().every(t=>!t.titleLabel.visible),'workspace filtering controls dynamic display');

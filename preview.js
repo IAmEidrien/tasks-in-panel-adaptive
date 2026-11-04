@@ -4,6 +4,7 @@
 // Independently implemented: delayed close, native window clones and pointer anchoring.
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
+import Pango from 'gi://Pango';
 import St from 'gi://St';
 import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -71,15 +72,20 @@ export class Preview {
 
     addCard(window, width, height, scale) {
         // vertical was superseded by orientation in newer Shell's St.BoxLayout.
-        const card = new St.BoxLayout({style_class: 'tip-preview-card',
+        const card = new St.BoxLayout({style_class: 'tip-preview-card', width: width * scale,
             ...(Number(Config.PACKAGE_VERSION.split('.')[0]) < 48 ? {vertical: true} : {orientation: Clutter.Orientation.VERTICAL})});
         const header = new St.BoxLayout({style_class: 'tip-preview-header'});
         const title = new St.Label({text: window.title || 'Untitled window', y_align: Clutter.ActorAlign.CENTER});
+        title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         const activate = () => { this.close(); Main.activateWindow(window); };
         const titleButton = new St.Button({child: title, can_focus: true, x_expand: true, style_class: 'tip-preview-title'});
+        titleButton.set_style(`max-width: ${Math.max(24, width - 56)}px;`);
+        titleButton.accessible_name = window.title || 'Untitled window';
         titleButton.connect('clicked', activate);
         const close = new St.Button({child: new St.Icon({icon_name: 'window-close-symbolic', icon_size: 16}),
-            can_focus: true, style_class: 'button tip-preview-close', accessible_name: `Close ${window.title || 'window'}`});
+            can_focus: true, x_expand: false, y_expand: false,
+            x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.CENTER,
+            style_class: 'tip-preview-close', accessible_name: `Close ${window.title || 'window'}`});
         close.visible = window.can_close();
         close.connect('clicked', () => { this.close(); window.delete(global.get_current_time()); });
         header.add_child(titleButton);
