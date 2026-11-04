@@ -46,7 +46,7 @@ and Raise share one delay setting, initially **300 ms**. None hides that setting
 Raise temporarily brings a window forward without focusing it and restores the
 previous stacking when the pointer leaves.
 
-Previews show live thumbnails without changing window focus. Titles ellipsize
+Previews show live thumbnails with softly rounded corners without changing window focus. Titles ellipsize
 inside compact cards, with 3:2 close buttons that stay independent of title length.
 Preview titles follow the task’s theme font weight or the Container override. Move into a preview
 to select a window or use its close button. Grouped applications show multiple

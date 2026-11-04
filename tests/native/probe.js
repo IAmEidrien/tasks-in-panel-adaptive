@@ -119,6 +119,8 @@ export default class Probe extends Extension {
         for(const card of bar.preview.cards.get_children()) {
             const header=card.get_first_child(),title=header.get_first_child(),close=header.get_last_child();
             check(title.get_child().get_theme_node().get_font().get_weight()===grouped.titleLabel.get_theme_node().get_font().get_weight(),'preview title follows resolved task font weight');
+            const thumbnail=card.get_last_child().get_child();
+            check(!!thumbnail.get_effect('tip-rounded-clip'),'live window thumbnail has rounded clipping');
             const [cw,ch]=close.get_transformed_size();
             check(cw/ch>=1.4&&cw/ch<=1.6,'preview close button keeps 3:2 shape');
             check(title.get_transformed_size()[0]<=200*scale&&card.get_transformed_size()[0]<=256*scale,'preview titles stay within compact cards');

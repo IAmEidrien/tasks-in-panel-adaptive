@@ -66,7 +66,9 @@ outer container's panel-button styling. Actual Adwaita light (with 125% text)
 and dark stylesheets were loaded and screenshots inspected; task hover tint is
 checked against the computed theme color, including native panel selectors.
 Preview titles are checked against the resolved task font weight and both
-normal/bold overrides. Preview activation, close controls, keyboard navigation
+normal/bold overrides. Live thumbnail rounded clipping is checked on both shader
+backends (Shell on 46, Clutter on 51), with additional full runs on GNOME 48
+and GNOME 50 (two monitors). Preview activation, close controls, keyboard navigation
 and lifecycle checks continue to run alongside these checks.
 
 ## Reproduce native tests

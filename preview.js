@@ -9,6 +9,7 @@ import St from 'gi://St';
 import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
+import {RoundedClipEffect} from './roundedClip.js';
 
 export class Preview {
     constructor() {
@@ -106,6 +107,7 @@ export class Preview {
             clone.set_size(buffer.width * ratio, buffer.height * ratio);
             clone.set_position((buffer.x - frame.x) * ratio, (buffer.y - frame.y) * ratio);
             image.add_child(clone);
+            image.add_effect_with_name('tip-rounded-clip', new RoundedClipEffect(8 * scale));
         } else {
             // Never unminimize a window just to obtain a thumbnail.
             image.destroy();
