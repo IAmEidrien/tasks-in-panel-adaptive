@@ -64,8 +64,10 @@ GNOME 46 and 51 additionally exercise long preview titles, compact card bounds,
 3:2 close-button allocations, wider icon-only task targets and removal of the
 outer container's panel-button styling. Actual Adwaita light (with 125% text)
 and dark stylesheets were loaded and screenshots inspected; task hover tint is
-checked against the computed theme color, including native panel selectors. Preview activation, close controls,
-keyboard navigation and lifecycle checks continue to run alongside these checks.
+checked against the computed theme color, including native panel selectors.
+Preview titles are checked against the resolved task font weight and both
+normal/bold overrides. Preview activation, close controls, keyboard navigation
+and lifecycle checks continue to run alongside these checks.
 
 ## Reproduce native tests
 

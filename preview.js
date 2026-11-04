@@ -54,6 +54,8 @@ export class Preview {
         if (source.dead || !source.mapped || !windows.length) return;
         this.close();
         this.source = source;
+        // Resolve the panel theme and any container override on the source task.
+        this.headerWeight = source.titleLabel.get_theme_node().get_font().get_weight();
         const scale = this.scaleContext.scale_factor;
         const monitor = Main.layoutManager.findMonitorForActor(source) ?? Main.layoutManager.primaryMonitor;
         const width = Math.min(240, monitor.width / scale * 0.65);
@@ -77,6 +79,7 @@ export class Preview {
         const header = new St.BoxLayout({style_class: 'tip-preview-header'});
         const title = new St.Label({text: window.title || 'Untitled window', y_align: Clutter.ActorAlign.CENTER});
         title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        title.set_style(`font-weight: ${this.headerWeight};`);
         const activate = () => { this.close(); Main.activateWindow(window); };
         const titleButton = new St.Button({child: title, can_focus: true, x_expand: true, style_class: 'tip-preview-title'});
         titleButton.set_style(`max-width: ${Math.max(24, width - 56)}px;`);

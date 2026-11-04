@@ -47,7 +47,8 @@ Raise temporarily brings a window forward without focusing it and restores the
 previous stacking when the pointer leaves.
 
 Previews show live thumbnails without changing window focus. Titles ellipsize
-inside compact cards, with 3:2 close buttons that stay independent of title length. Move into a preview
+inside compact cards, with 3:2 close buttons that stay independent of title length.
+Preview titles follow the task’s theme font weight or the Container override. Move into a preview
 to select a window or use its close button. Grouped applications show multiple
 cards, with horizontal scrolling when needed. A minimized window has a labeled
 placeholder: displaying a preview never unminimizes it. Escape dismisses a preview during keyboard navigation in the panel.

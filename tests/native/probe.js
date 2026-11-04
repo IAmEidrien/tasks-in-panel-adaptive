@@ -118,11 +118,18 @@ export default class Probe extends Extension {
         GLib.file_set_contents(`${root}/geometry.json`,JSON.stringify(bar.preview.cards.get_children().map(c=>({card:c.get_transformed_size(),header:c.get_first_child().get_transformed_size(),title:c.get_first_child().get_first_child().get_transformed_size(),close:c.get_first_child().get_last_child().get_transformed_size()}))));
         for(const card of bar.preview.cards.get_children()) {
             const header=card.get_first_child(),title=header.get_first_child(),close=header.get_last_child();
+            check(title.get_child().get_theme_node().get_font().get_weight()===grouped.titleLabel.get_theme_node().get_font().get_weight(),'preview title follows resolved task font weight');
             const [cw,ch]=close.get_transformed_size();
             check(cw/ch>=1.4&&cw/ch<=1.6,'preview close button keeps 3:2 shape');
             check(title.get_transformed_size()[0]<=200*scale&&card.get_transformed_size()[0]<=256*scale,'preview titles stay within compact cards');
         }
         await screenshot('grouped-preview');
+        for(const weight of ['normal','bold']) {
+            s.set_string('container-font-weight',weight);await wait(150);bar.preview.open(grouped,bar.previewWindows(grouped));await wait(150);
+            const label=bar.preview.cards.get_first_child().get_first_child().get_first_child().get_child();
+            check(label.get_theme_node().get_font().get_weight()===(weight==='bold'?700:400),'preview title respects '+weight+' override');
+        }
+        s.set_string('container-font-weight','theme');await wait(150);
         bar.preview.close();s.set_boolean('group-windows',false);await wait(200);
         a2.window.change_workspace_by_index(1,false);await wait(300);
         check(shown().length===2&&shown().every(t=>!t.titleLabel.visible),'workspace filtering controls dynamic display');
