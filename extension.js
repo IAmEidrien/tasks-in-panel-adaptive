@@ -17,6 +17,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {migrate} from './settings.js';
 import {backgroundStyle, needsTitles, visibleWindows} from './policy.js';
 import {Preview} from './preview.js';
+import {readOverviewOrder, orderedWindows} from './overviewOrder.js';
 
 const STATUS_ID = 'tasksInPanelTaskbar';
 const appFor = w => Shell.WindowTracker.get_default().get_window_app(w);
@@ -188,6 +189,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         this.settings = settings;
         this.tasks = new Map();
         this.closed = new WeakSet();
+        this.overviewOrder = new Map();
         this.can_focus = false;
         // Retain PanelMenu registration, without its button/theme feedback.
         this.remove_style_class_name('panel-button');
@@ -209,12 +211,15 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         global.window_manager.connectObject('map', () => this.queueRefresh(), this);
         global.workspace_manager.connectObject('active-workspace-changed', () => this.queueRefresh(), this);
         Main.layoutManager.connectObject('monitors-changed', () => { this.preview.close(); this.queueRefresh(); }, this);
-        Main.overview.connectObject('showing', () => this.stopHover(), this);
+        Main.overview.connectObject('showing', () => { this.stopHover(); this.captureOverviewOrder(); },
+            'shown', () => this.captureOverviewOrder(),
+            'hiding', () => this.captureOverviewOrder(), this);
         this.sessionSignal = Main.sessionMode.connect('updated', () => this.stopHover());
         this.settingsSignal = settings.connect('changed', () => {
             this.stopHover(); this.readSettings(); this.queueRefresh();
         });
         this.refresh();
+        if (Main.overview.visible) this.captureOverviewOrder();
     }
 
     readSettings() {
@@ -246,25 +251,53 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         });
     }
 
+    captureOverviewOrder(defer = true) {
+        const order = readOverviewOrder(Main.overview);
+        // Shell may have already destroyed its workspace views on exit.
+        if (order.length) {
+            this.overviewOrder = new Map(order.filter(w => !this.closed.has(w)).map((w, i) => [w, i]));
+            this.queueRefresh();
+        }
+        // 'shown' can precede the first workspace allocation on older Shell.
+        // Read after one painted frame, without polling or forcing a layout.
+        if (defer && Main.overview.visible) {
+            if (this.orderPaintSignal) global.stage.disconnect(this.orderPaintSignal);
+            this.orderPaintSignal = global.stage.connect('after-paint', () => {
+                global.stage.disconnect(this.orderPaintSignal);
+                this.orderPaintSignal = 0;
+                if (!this.dead) this.captureOverviewOrder(false);
+            });
+        }
+    }
+
     refresh() {
         const windows = global.display.sort_windows_by_stacking(global.get_window_actors().map(a => a.meta_window)
             .filter(w => w && !this.closed.has(w) && w.window_type !== Meta.WindowType.MODAL_DIALOG));
-        // Presentation follows creation order; grouping still uses stacking order.
-        const ordered = [...windows].sort((a, b) => a.get_stable_sequence() - b.get_stable_sequence());
+        // Keep the last computed overview order stable outside the overview.
+        // Group representatives still follow focus/stacking, independently.
+        const ordered = orderedWindows(windows, this.overviewOrder);
         for (const w of ordered) if (!this.tasks.has(w)) {
             const task = new Task(this, w);
             this.tasks.set(w, task);
             this.box.add_child(task);
         }
-        ordered.forEach((w, index) => {
-            const task = this.tasks.get(w);
-            if (this.box.get_child_at_index(index) !== task) this.box.set_child_at_index(task, index);
-        });
         const workspace = global.workspace_manager.get_active_workspace();
-        this.eligible = visibleWindows(windows, {...this.options, group: false}, workspace,
+        this.eligible = visibleWindows(ordered, {...this.options, group: false}, workspace,
             this.monitor ?? Main.layoutManager.primaryIndex, global.display.focus_window, appKey);
         const shown = visibleWindows(windows, this.options, workspace,
             this.monitor ?? Main.layoutManager.primaryIndex, global.display.focus_window, appKey);
+        // A grouped application keeps its first eligible member's slot even
+        // when focus selects a different representative window.
+        const rank = new Map(ordered.map((w, i) => [w, i]));
+        const appRanks = new Map();
+        for (const w of this.eligible) if (!appRanks.has(appKey(w))) appRanks.set(appKey(w), rank.get(w));
+        shown.sort((a, b) => this.options.group
+            ? appRanks.get(appKey(a)) - appRanks.get(appKey(b)) : rank.get(a) - rank.get(b));
+        const presentation = [...shown, ...ordered.filter(w => !shown.includes(w))];
+        presentation.forEach((w, index) => {
+            const task = this.tasks.get(w);
+            if (this.box.get_child_at_index(index) !== task) this.box.set_child_at_index(task, index);
+        });
         const titles = needsTitles(shown, appKey);
         for (const [w, task] of this.tasks) {
             task.visible = shown.includes(w);
@@ -282,6 +315,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
 
     removeWindow(window) {
         this.closed.add(window);
+        this.overviewOrder.delete(window);
         this.preview.close();
         const task = this.tasks.get(window);
         if (!task) return;
@@ -320,6 +354,8 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
 
     destroy() {
         this.dead = true;
+        if (this.orderPaintSignal) global.stage.disconnect(this.orderPaintSignal);
+        this.orderPaintSignal = 0;
         if (this.refreshTimer) GLib.source_remove(this.refreshTimer);
         this.refreshTimer = 0;
         this.settings.disconnect(this.settingsSignal);
@@ -332,6 +368,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         this.preview.destroy();
         for (const task of this.box.get_children()) task.destroy();
         this.tasks.clear();
+        this.overviewOrder.clear();
         super.destroy();
     }
 });

@@ -44,10 +44,10 @@ export default class Probe extends Extension {
         Main.overview.hide();
         for(let n=0;n<40&&(Main.overview.visible||[...bar.tasks.keys()].some(w=>w.get_frame_rect().width<=0));n++)await wait(100);
         await wait(600);
-        const shown=()=>[...bar.tasks.values()].filter(t=>t.visible);
+        const shown=()=>bar.box.get_children().filter(t=>t.visible&&!t.closing);
         check(shown().length===3,'three tasks visible');
         const inCreationOrder=()=>{const seq=bar.box.get_children().filter(t=>!t.closing).map(t=>t.window.get_stable_sequence());return seq.every((v,i)=>i===0||seq[i-1]<v);};
-        check(inCreationOrder(),'initial tasks follow window creation order');
+        check(bar.overviewOrder.size>0||inCreationOrder(),'creation-order fallback before an overview layout is available');
         check(s.get_boolean('middle-click-close'),'middle click defaults to closing windows');
         s.set_boolean('middle-click-close',false);
         check(!bar.has_style_class_name('panel-button'),'outer container has no panel-button styling');
@@ -61,7 +61,7 @@ export default class Probe extends Extension {
         GLib.file_set_contents(`${root}/widths.json`,JSON.stringify(shown().map(t=>({title:t.window.title,text:t.titleLabel.text,size:t.get_transformed_size(),preferred:t.get_preferred_width(-1),style:t.style}))));
         check(a1.get_preferred_width(-1)[1]<a2.get_preferred_width(-1)[1],'unlimited width keeps natural title widths');
         check(bar.tasks.get(a1.window)===a1,'settings retain task actors');
-        check(inCreationOrder(),'settings retain creation order');
+        check(bar.overviewOrder.size>0||inCreationOrder(),'settings preserve creation-order fallback when no overview exists');
         const backend=Clutter.get_default_backend?.()??global.stage.get_context().get_backend();
         const pointer=backend.get_default_seat().create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
         const move=(x,y)=>pointer.notify_absolute_motion(GLib.get_monotonic_time(),x,y);
@@ -73,6 +73,7 @@ export default class Probe extends Extension {
         GLib.file_set_contents(`${root}/hover-state.json`,JSON.stringify({hover:a1.hover,preview:bar.preview.visible,menu:a1.menu.isOpen,pointer:global.get_pointer(),taskPos:a1.get_transformed_position(),taskSize:a1.get_transformed_size(),options:bar.options,overview:Main.overview.visible,starting:Main.layoutManager._startingUp,focus:global.display.focus_window?.title,shown:Main.overview._shown,animating:Main.overview._animationInProgress}));
         await screenshot('hover-state');
         check(a1.hover&&bar.preview.visible,'real pointer opens preview after delay');
+        const beforePreviewOrder=shown().map(t=>t.window);
         const hoverColor=a1.get_theme_node().get_background_color();
         check(!a1.get_theme_node().get_box_shadow(),'task hover has no native inset fill');
         check(hoverColor.red===127&&hoverColor.green===127&&hoverColor.alpha<=32,'task hover uses restrained neutral tint over panel theme');
@@ -87,7 +88,7 @@ export default class Probe extends Extension {
         const body=bar.preview.cards.get_first_child().get_last_child();await hover(body);await click();
         GLib.file_set_contents(`${root}/click-state.json`,JSON.stringify({focus:global.display.focus_window?.title,expected:previewWindow.title,preview:bar.preview.visible,pointer:global.get_pointer(),overview:Main.overview.visible}));
         check(global.display.focus_window===previewWindow&&!bar.preview.visible,'preview click activates real window');
-        check(inCreationOrder(),'focus changes retain creation order');
+        check(shown().every((t,i)=>t.window===beforePreviewOrder[i]),'focus changes retain the current overview snapshot');
         s.set_string('hover-action','none');await wait(150);move(800,500);await wait(200);await hover(b);
         check(!bar.preview.visible,'None disables hover');
         const beforeRaise=global.display.focus_window;
@@ -144,6 +145,26 @@ export default class Probe extends Extension {
         }
         s.set_int('preview-height',160);await wait(150);
         bar.preview.close();s.set_boolean('group-windows',false);await wait(200);
+        const vshell=Main.extensionManager.lookup('vertical-workspaces@G-dH.github.com');
+        const modes=GLib.getenv('TEST_VSHELL') ? [2,1,0] : [null];
+        for(const mode of modes) {
+            if(mode!==null) {check(vshell?.state===1,'V-Shell enabled');vshell.stateObj.getSettings().set_int('overview-sort-windows',mode);await wait(500);}
+            Main.activateWindow(a1.window);await wait(150);Main.overview.show();await wait(1000);
+            const layouts=Main.overview._overview.controls._workspacesDisplay._workspacesViews.flatMap(v=>v._workspaces??[v._workspace]);
+            const slots=layouts.flatMap(w=>w?._container?.layout_manager?._windowSlots??[]);
+            const expected=[...new Set(slots.map(slot=>slot[4]?.metaWindow).filter(w=>shown().some(t=>t.window===w)))];
+            GLib.file_set_contents(`${root}/order-debug-${mode}.json`,JSON.stringify({overview:{visible:Main.overview.visible,shown:Main.overview._shown,animating:Main.overview._animationInProgress},expected:expected.map(w=>w.title.slice(0,15)),shown:shown().map(t=>t.window.title.slice(0,15)),cached:[...bar.overviewOrder].map(([w,r])=>[w.title.slice(0,15),r]),rows:layouts.flatMap(w=>w?._container?.layout_manager?._layout?.rows??[]).map(r=>r.windows.map(p=>p.metaWindow?.title.slice(0,15)))}));
+            check(expected.length===3,'actual overview layout contains all tasks');
+            check(shown().every((t,i)=>t.window===expected[i]),'tasks follow actual overview layout '+mode);
+            Main.overview.hide();await wait(500);
+            const before=shown().map(t=>t.window);Main.activateWindow(b.window);await wait(250);
+            check(shown().every((t,i)=>t.window===before[i]),'overview snapshot stays stable after focus '+mode);
+            s.set_boolean('group-windows',true);await wait(150);
+            const apps=shown().map(t=>t.app.get_id());Main.activateWindow(a2.window);await wait(200);
+            check(shown().every((t,i)=>t.app.get_id()===apps[i]),'grouped application slots stay stable '+mode);
+            s.set_boolean('group-windows',false);await wait(150);
+        }
+
         a2.window.change_workspace_by_index(1,false);await wait(300);
         check(shown().length===2&&shown().every(t=>!t.titleLabel.visible),'workspace filtering controls dynamic display');
         s.set_boolean('show-active-workspace',false);await wait(250);check(shown().length===3,'workspace filter optional');
@@ -169,11 +190,14 @@ export default class Probe extends Extension {
         check(bar.preview.visible&&a2.window.minimized,'minimized preview never unminimizes window');
         Main.extensionManager.disableExtension(uuid);await wait(300);
         check(!Main.panel.statusArea.tasksInPanelTaskbar,'container removed with preview open');
-        check(!bar.preview.closeTimer&&!bar.refreshTimer&&bar.tasks.size===0,'disable cancels resources');
+        check(!bar.preview.closeTimer&&!bar.refreshTimer&&!bar.orderPaintSignal&&bar.tasks.size===0&&bar.overviewOrder.size===0,'disable cancels resources');
+        Main.overview.show();await wait(1000);
         Main.extensionManager.enableExtension(uuid);await wait(400);check(Main.extensionManager.lookup(uuid).state===1,'re-enable');
         const rebuilt=Main.extensionManager.lookup(uuid).stateObj._bar;
-        const sequences=rebuilt.box.get_children().map(t=>t.window.get_stable_sequence());
-        check(sequences.length===2&&sequences[0]<sequences[1],'re-enable restores creation order after stacking changes');
+        check(rebuilt.overviewOrder.size===2,'enabling during overview captures existing layout');
+        const rebuiltTasks=rebuilt.box.get_children().filter(t=>t.visible);
+        check(rebuiltTasks.every((t,i)=>rebuilt.overviewOrder.get(t.window)===i),'re-enabled tasks follow the visible overview');
+        Main.overview.hide();await wait(300);
         s.set_boolean('middle-click-close',true);s.set_string('hover-action','none');await wait(150);await hover(rebuilt.tasks.get(a2.window));
         pointer.notify_button(GLib.get_monotonic_time(),Clutter.BUTTON_MIDDLE,Clutter.ButtonState.PRESSED);await wait(50);pointer.notify_button(GLib.get_monotonic_time(),Clutter.BUTTON_MIDDLE,Clutter.ButtonState.RELEASED);await wait(350);
         check(!rebuilt.tasks.has(a2.window)&&rebuilt.tasks.has(a1.window),'real middle click closes only represented window');

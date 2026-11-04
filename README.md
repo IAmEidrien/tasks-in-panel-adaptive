@@ -11,8 +11,11 @@ when an application has multiple visible tasks, every task shows its title to
 make those windows easy to distinguish. Turn dynamic display off to choose
 icons, window titles and application names individually.
 
-Tasks remain in window creation order across focus changes, settings updates and
-re-enabling the extension.
+Tasks follow the last computed overview layout in reading order, including
+V-Shell’s position, MRU and stable-order modes. That order stays fixed between
+overview visits; new windows append in creation order. Before a usable overview
+layout exists, creation order is the fallback. Grouped applications keep stable
+slots when their representative window changes.
 
 Tasks show windows on the **active workspace** and the **panel's monitor** by
 default. Both filters are optional. Application grouping shows one representative
@@ -107,8 +110,8 @@ checks. [TESTING.md](TESTING.md) documents isolated native tests.
 72 quiet hours and successful CI; `do-not-merge` pauses promotion.
 
 The implementation separates task actors (`extension.js`), preview lifecycle
-(`preview.js`), filtering and display policy (`policy.js`), and one-time settings
-import (`settings.js`). Preferences update the running container without
+(`preview.js`), filtering and display policy (`policy.js`), computed overview order
+(`overviewOrder.js`), and one-time settings import (`settings.js`). Preferences update the running container without
 restarting the extension. Packaging compiles schemas in a temporary directory
 and includes only runtime files and their documentation/licenses.
 

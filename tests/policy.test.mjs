@@ -26,3 +26,19 @@ test('hidden windows never force titles and custom CSS is confined to a single d
  assert.equal(backgroundStyle(true,'rgba(1,2,3,0.5)','bold'),'background-color: rgba(1,2,3,0.5);font-weight: bold;');
  assert.equal(backgroundStyle(false,'#ffffff','theme'),'');
 });
+
+const {readOverviewOrder,orderedWindows}=await import(`data:text/javascript,${encodeURIComponent(readFileSync(new URL('../overviewOrder.js',import.meta.url),'utf8'))}`);
+test('overview order reads actual rows, deduplicates sticky windows and tolerates absent layouts',()=>{
+ const a={},b={},c={};
+ const workspace=(index,monitor,rows)=>({metaWorkspace:{index:()=>index},_monitorIndex:monitor,_container:{layout_manager:{_layout:{rows:rows.map(windows=>({windows:windows.map(metaWindow=>({metaWindow}))}))}}}});
+ const overview={_overview:{controls:{_workspacesDisplay:{_workspacesViews:[{_workspaces:[workspace(1,0,[[c]]),workspace(0,0,[[b,a]])]},{_workspace:workspace(0,1,[[a]])}]}}}};
+ assert.deepEqual(readOverviewOrder(overview),[b,a,c]);
+ assert.deepEqual(readOverviewOrder(null),[]);
+ assert.deepEqual(readOverviewOrder({get _overview(){throw Error('unavailable');}}),[]);
+ assert.deepEqual(readOverviewOrder({_overview:{controls:{}}}),[]);
+});
+test('overview snapshots remain stable while new windows append by creation sequence',()=>{
+ const a={get_stable_sequence:()=>1},b={get_stable_sequence:()=>2},c={get_stable_sequence:()=>3};
+ assert.deepEqual(orderedWindows([c,a,b],new Map()),[a,b,c]);
+ assert.deepEqual(orderedWindows([a,c,b],new Map([[b,0],[a,1]])),[b,a,c]);
+});

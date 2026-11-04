@@ -14,6 +14,10 @@ org.gnome.shell.extensions.tasks-in-panel-adaptive. The compact original schema
 exists only for one-time import of explicit task preferences. Do not import
 unrelated global settings or overwrite existing Adaptive values.
 
+Task order samples the overview’s computed rows and stays fixed between visits.
+Keep creation-order fallback when private layout APIs are unavailable. Do not
+open the overview, poll layouts or patch V-Shell to obtain ordering.
+
 Runtime stays at repository root for Git-managed installations. Never copy .git
 through installers or overwrite installed Git checkouts. Do not commit personal
 themes, settings, generated schemas, screenshots or native runtime output.

@@ -76,6 +76,18 @@ settings binding and the 160-pixel default. Live tests exercise both range limit
 (80/320), grouped layouts and monitor bounds after resizing. The close target
 is checked at 48×32 logical pixels, alongside its 3:2 proportions.
 
+## Overview ordering
+
+The ordering reader samples computed overview rows without opening the overview,
+then keeps that snapshot stable outside it. Missing/replaced private layout APIs
+fall back to creation order. Pure regressions cover missing views, sticky-window
+deduplication, workspace/monitor grouping and newly appended windows.
+Native checks compare task order against actual overview slots, then change focus
+to verify that the snapshot remains stable. V-Shell tests cycle its stable, MRU
+and position sort modes using V-Shell 51.3 (`6f22b98`) on GNOME 46 and 51.
+Stock GNOME 51 is also checked. Grouped application slots remain fixed when
+focus changes the representative window.
+
 ## Reproduce native tests
 
 Use a disposable session or container with the matching Shell/GJS/St/Clutter,
@@ -87,6 +99,7 @@ it does not use an existing desktop session's settings.
 python3 tests/native/run.py --version 46 --output /tmp/tip-a-46
 python3 tests/native/run.py --version 46 --xorg --output /tmp/tip-a-46-xorg
 python3 tests/native/run.py --version 50 --multi-monitor --output /tmp/tip-a-50
+python3 tests/native/run.py --version 46 --vshell /path/to/vertical-workspaces --output /tmp/tip-a-vshell
 ```
 
 Each output directory must be new. The version argument selects compositor flags;
