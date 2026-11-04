@@ -71,6 +71,11 @@ backends (Shell on 46, Clutter on 51), with additional full runs on GNOME 48
 and GNOME 50 (two monitors). Preview activation, close controls, keyboard navigation
 and lifecycle checks continue to run alongside these checks.
 
+Preview-height controls are checked for visibility in Preview versus Raise/None,
+settings binding and the 160-pixel default. Live tests exercise both range limits
+(80/320), grouped layouts and monitor bounds after resizing. The close target
+is checked at 48×32 logical pixels, alongside its 3:2 proportions.
+
 ## Reproduce native tests
 
 Use a disposable session or container with the matching Shell/GJS/St/Clutter,

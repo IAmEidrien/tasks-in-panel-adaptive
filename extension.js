@@ -225,6 +225,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
             focusedOnly: s.get_boolean('show-focused-window'), group: s.get_boolean('group-windows'),
             monochrome: s.get_boolean('desaturate-icon'), maxWidth: s.get_int('button-width'),
             middleClickClose: s.get_boolean('middle-click-close'), animate: s.get_boolean('animate-on-close'), hover: s.get_string('hover-action'), delay: s.get_int('hover-delay'),
+            previewHeight: s.get_int('preview-height'),
             scroll: s.get_boolean('container-scroll'), position: s.get_string('container-position'), weight: s.get_string('container-font-weight')};
         this.set_style(backgroundStyle(s.get_boolean('container-custom-background'),
             s.get_string('container-background-color'), this.options.weight));

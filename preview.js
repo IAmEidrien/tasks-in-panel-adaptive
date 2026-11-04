@@ -59,8 +59,8 @@ export class Preview {
         this.headerWeight = source.titleLabel.get_theme_node().get_font().get_weight();
         const scale = this.scaleContext.scale_factor;
         const monitor = Main.layoutManager.findMonitorForActor(source) ?? Main.layoutManager.primaryMonitor;
-        const width = Math.min(240, monitor.width / scale * 0.65);
-        const height = Math.min(160, monitor.height / scale * 0.4);
+        const height = Math.min(source.bar.options.previewHeight, monitor.height / scale * 0.4);
+        const width = Math.min(height * 1.5, monitor.width / scale * 0.65);
         const overflow = windows.length * (width + 20) > monitor.width / scale - 72;
         const scroll = new St.ScrollView({hscrollbar_policy: overflow ? St.PolicyType.AUTOMATIC : St.PolicyType.NEVER,
             vscrollbar_policy: St.PolicyType.NEVER});
@@ -86,7 +86,7 @@ export class Preview {
         titleButton.set_style(`max-width: ${Math.max(24, width - 56)}px;`);
         titleButton.accessible_name = window.title || 'Untitled window';
         titleButton.connect('clicked', activate);
-        const close = new St.Button({child: new St.Icon({icon_name: 'window-close-symbolic', icon_size: 16}),
+        const close = new St.Button({child: new St.Icon({icon_name: 'window-close-symbolic', icon_size: 18}),
             can_focus: true, x_expand: false, y_expand: false,
             x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.CENTER,
             style_class: 'tip-preview-close', accessible_name: `Close ${window.title || 'window'}`});

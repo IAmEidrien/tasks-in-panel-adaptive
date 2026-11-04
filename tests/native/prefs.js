@@ -21,9 +21,13 @@ app.connect('activate',()=>{try{
  const s=p.getSettings(),controls=walk(window);const row=title=>controls.find(w=>w.get_title?.()===title);
  check(s.get_boolean('dynamic-task-display')&&s.get_boolean('show-panel-monitor-only'),'adaptive defaults');
  check(!s.get_boolean('show-window-title')&&s.get_string('container-position')==='center'&&s.get_string('hover-action')==='none','explicit task preferences migrated');
+ check(s.get_int('preview-height')===160&&!row('Preview height').visible,'preview height default and hidden for None');
  check(!row('Show window icon').visible&&!row('Hover delay').visible,'contextual rows hidden');
  s.set_boolean('dynamic-task-display',false);check(row('Show window icon').visible,'fixed controls revealed');
  s.set_string('hover-action','preview');check(row('Hover delay').visible,'shared preview delay revealed');
+ check(row('Preview height').visible,'preview height revealed for Preview');
+ s.set_string('hover-action','raise');check(!row('Preview height').visible&&row('Hover delay').visible,'preview height hidden for Raise');
+ s.set_string('hover-action','preview');row('Preview height').value=240;check(s.get_int('preview-height')===240,'preview height control updates settings');
  s.set_boolean('container-custom-background',true);check(row('Background color').visible,'custom background revealed');
  check(!row('Global')&&!row('Indicators')&&!row('Undecorated button'),'unrelated sections removed');
  const before=s.get_string('hover-action');p.fillPreferencesWindow(new Adw.PreferencesWindow());check(s.get_string('hover-action')===before,'migration does not overwrite new choices');

@@ -122,6 +122,7 @@ export default class Probe extends Extension {
             const thumbnail=card.get_last_child().get_child();
             check(!!thumbnail.get_effect('tip-rounded-clip'),'live window thumbnail has rounded clipping');
             const [cw,ch]=close.get_transformed_size();
+            check(cw>=48*scale-1&&ch>=32*scale-1,'preview close button has an obvious 48 by 32 target');
             check(cw/ch>=1.4&&cw/ch<=1.6,'preview close button keeps 3:2 shape');
             check(title.get_transformed_size()[0]<=200*scale&&card.get_transformed_size()[0]<=256*scale,'preview titles stay within compact cards');
         }
@@ -132,6 +133,16 @@ export default class Probe extends Extension {
             check(label.get_theme_node().get_font().get_weight()===(weight==='bold'?700:400),'preview title respects '+weight+' override');
         }
         s.set_string('container-font-weight','theme');await wait(150);
+        for(const height of [80,320]) {
+            s.set_int('preview-height',height);await wait(150);bar.preview.open(grouped,bar.previewWindows(grouped));await wait(200);
+            const card=bar.preview.cards.get_first_child();
+            const expectedWidth=Math.min(height,monitor.height/scale*0.4)*1.5;
+            check(Math.abs(card.get_transformed_size()[0]-Math.min(expectedWidth,monitor.width/scale*0.65)*scale)<3,'preview size follows height '+height);
+            const [x,y]=bar.preview.pointer.get_transformed_position(),[w,h]=bar.preview.pointer.get_transformed_size();
+            check(x>=monitor.x-1&&x+w<=monitor.x+monitor.width+1&&y>=monitor.y-1&&y+h<=monitor.y+monitor.height+1,'resized grouped previews fit screen');
+            await screenshot('preview-height-'+height);
+        }
+        s.set_int('preview-height',160);await wait(150);
         bar.preview.close();s.set_boolean('group-windows',false);await wait(200);
         a2.window.change_workspace_by_index(1,false);await wait(300);
         check(shown().length===2&&shown().every(t=>!t.titleLabel.visible),'workspace filtering controls dynamic display');

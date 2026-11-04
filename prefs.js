@@ -72,10 +72,13 @@ export default class Preferences extends ExtensionPreferences {
         const hover = group(tasks, 'Hover');
         combo(hover, 'hover-action', 'Hover action', ['none', 'raise', 'preview'], ['None', 'Raise', 'Preview']);
         const delay = spin(hover, 'hover-delay', 'Hover delay', 'Milliseconds before raising a window or showing previews.', 0, 2000, 10);
+        const previewHeight = spin(hover, 'preview-height', 'Preview height',
+            'Maximum thumbnail height in logical pixels. Limited to fit the screen.', 80, 320, 10);
         const sync = () => {
             for (const row of fixed) row.visible = !dynamic.active;
             colorRow.visible = custom.active;
             delay.visible = s.get_string('hover-action') !== 'none';
+            previewHeight.visible = s.get_string('hover-action') === 'preview';
         };
         dynamic.connect('notify::active', sync); custom.connect('notify::active', sync);
         signals.push(s.connect('changed::hover-action', sync));

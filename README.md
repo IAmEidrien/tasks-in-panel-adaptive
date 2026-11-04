@@ -43,13 +43,18 @@ available panel space and theme's minimum button size still apply.
 
 Choose one **hover action**: **Preview** (default), **Raise**, or **None**. Preview
 and Raise share one delay setting, initially **300 ms**. None hides that setting.
+**Preview height** appears only for Preview. It ranges from **80–320 logical
+pixels**, initially **160**. Width scales with height, window proportions are
+preserved, and previews are capped to fit the current monitor.
+
 Raise temporarily brings a window forward without focusing it and restores the
 previous stacking when the pointer leaves.
 
-Previews show live thumbnails with softly rounded corners without changing window focus. Titles ellipsize
-inside compact cards, with 3:2 close buttons that stay independent of title length.
-Preview titles follow the task’s theme font weight or the Container override. Move into a preview
-to select a window or use its close button. Grouped applications show multiple
+Previews show live thumbnails with softly rounded corners without changing
+window focus. Titles ellipsize inside compact cards, with padded headers and
+subtly outlined 48×32 close buttons that stay independent of title length.
+Preview titles follow the task’s theme font weight or the Container override.
+Move into a preview to select a window or use its close button. Grouped applications show multiple
 cards, with horizontal scrolling when needed. A minimized window has a labeled
 placeholder: displaying a preview never unminimizes it. Escape dismisses a preview during keyboard navigation in the panel.
 
