@@ -76,6 +76,10 @@ settings binding and the 160-pixel default. Live tests exercise both range limit
 (80/320), grouped layouts and monitor bounds after resizing. The close target
 is checked at 48×32 logical pixels, alongside its 3:2 proportions.
 
+The thumbnail inset is verified at 8 logical pixels per side, with a 12-pixel
+rounded mask and aspect-preserving allocation. A generic popup-button theme
+stress rule checks that the close target retains its outline and background.
+
 ## Overview ordering
 
 The ordering reader samples computed overview rows without opening the overview,

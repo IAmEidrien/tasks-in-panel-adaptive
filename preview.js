@@ -15,6 +15,7 @@ export class Preview {
     constructor() {
         this.pointer = new BoxPointer.BoxPointer(St.Side.TOP, {reactive: true, can_focus: true, track_hover: true});
         this.pointer.add_style_class_name('popup-menu-boxpointer');
+        this.pointer.add_style_class_name('tip-preview-popup');
         this.pointer.reactive = true;
         this.pointer.track_hover = true;
         this.content = new St.BoxLayout({style_class: 'popup-menu-content tip-previews'});
@@ -96,18 +97,20 @@ export class Preview {
         header.add_child(close);
         card.add_child(header);
         const image = new St.Widget({layout_manager: new Clutter.FixedLayout(),
-            width: width * scale, height: height * scale, clip_to_allocation: true});
+            width: Math.max(1, width - 16) * scale, height: height * scale, clip_to_allocation: true,
+            x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER});
         const actor = window.get_compositor_private();
         const frame = window.get_frame_rect();
         const buffer = window.get_buffer_rect();
         if (actor && !window.minimized && frame.width > 0 && frame.height > 0) {
-            const ratio = Math.min(width * scale / frame.width, height * scale / frame.height, 1);
+            // Reserve the image button’s 8px inset on both sides before scaling.
+            const ratio = Math.min(Math.max(1, width - 16) * scale / frame.width, height * scale / frame.height, 1);
             image.set_size(frame.width * ratio, frame.height * ratio);
             const clone = new Clutter.Clone({source: actor});
             clone.set_size(buffer.width * ratio, buffer.height * ratio);
             clone.set_position((buffer.x - frame.x) * ratio, (buffer.y - frame.y) * ratio);
             image.add_child(clone);
-            image.add_effect_with_name('tip-rounded-clip', new RoundedClipEffect(8 * scale));
+            image.add_effect_with_name('tip-rounded-clip', new RoundedClipEffect(12 * scale));
         } else {
             // Never unminimize a window just to obtain a thumbnail.
             image.destroy();

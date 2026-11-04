@@ -53,7 +53,7 @@ preserved, and previews are capped to fit the current monitor.
 Raise temporarily brings a window forward without focusing it and restores the
 previous stacking when the pointer leaves.
 
-Previews show live thumbnails with softly rounded corners without changing
+Previews show live thumbnails with 12-pixel rounded corners and an 8-pixel inset without changing
 window focus. Titles ellipsize inside compact cards, with padded headers and
 subtly outlined 48×32 close buttons that stay independent of title length.
 Preview titles follow the task’s theme font weight or the Container override.

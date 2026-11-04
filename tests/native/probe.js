@@ -34,6 +34,10 @@ export default class Probe extends Extension {
         const info=Main.extensionManager.lookup(uuid);
         check(info.state===1,`enabled: ${info.error}`);
         const ext=info.stateObj, bar=ext._bar, s=ext.settings;
+        if(GLib.getenv('TEST_POPUP_STRESS')) {
+            GLib.file_set_contents(`${root}/popup-stress.css`,'.popup-menu-boxpointer .popup-menu-content StButton { background-color: transparent; border: 0 solid transparent; border-radius: 0; padding: 0; } .popup-menu-content { border-radius: 24px; }');
+            St.ThemeContext.get_for_stage(global.stage).get_theme().load_stylesheet(Gio.File.new_for_path(`${root}/popup-stress.css`));
+        }
         const scale=St.ThemeContext.get_for_stage(global.stage).scale_factor;
         for(const [app,title] of [['A','TIP A1'],['A','TIP A2 — '+ 'a long window title for testing maximum width and ellipsization '.repeat(12)],['B','TIP B1']]) {
             Gio.Subprocess.new(['gjs','-m',`${root}/client.js`,`org.eidrien.TipTest${app}`,title],Gio.SubprocessFlags.NONE);
@@ -121,7 +125,12 @@ export default class Probe extends Extension {
             const header=card.get_first_child(),title=header.get_first_child(),close=header.get_last_child();
             check(title.get_child().get_theme_node().get_font().get_weight()===grouped.titleLabel.get_theme_node().get_font().get_weight(),'preview title follows resolved task font weight');
             const thumbnail=card.get_last_child().get_child();
-            check(!!thumbnail.get_effect('tip-rounded-clip'),'live window thumbnail has rounded clipping');
+            const mask=thumbnail.get_effect('tip-rounded-clip');
+            check(!!mask&&mask.radius===12*scale,'live thumbnail has a prominent 12px rounded mask');
+            const imageButton=card.get_last_child(),node=imageButton.get_theme_node();
+            check(node.get_horizontal_padding()>=16*scale&&node.get_vertical_padding()>=16*scale,'thumbnail has an 8px inset on each side');
+            const closeNode=close.get_theme_node();
+            check(closeNode.get_background_color().alpha>=40&&closeNode.get_border_width(St.Side.TOP)>=scale,'close button keeps a visible background and outline');
             const [cw,ch]=close.get_transformed_size();
             check(cw>=48*scale-1&&ch>=32*scale-1,'preview close button has an obvious 48 by 32 target');
             check(cw/ch>=1.4&&cw/ch<=1.6,'preview close button keeps 3:2 shape');
