@@ -16,6 +16,11 @@ extension; distribution of the combination must satisfy GPLv3's requirements.
 pointer transfer and window-frame clipping. Its implementation is not bundled.
 The preview module independently uses GNOME Shell/Clutter APIs.
 
+Task creation-order handling and optional middle-click closing adapt upstream
+commits [0a0e7d3](https://github.com/fthx/tasks-in-panel/commit/0a0e7d31113ba414567bc1406b027ef67c3f9eb6)
+and [4c9edd2](https://github.com/fthx/tasks-in-panel/commit/4c9edd237b8c7c89f9f70c2f855b3f8b804872f7),
+respectively, under the same GPLv3 terms.
+
 ## Maintenance policy
 
 Original work prefers MIT wherever compatible. GPL-2.0-or-later is the preferred

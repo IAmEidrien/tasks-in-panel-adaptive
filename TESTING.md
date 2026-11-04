@@ -50,6 +50,14 @@ redisplay exception also occurred while test clients were closing; its stack
 was entirely in Shell's dash/deferred-work code. No TIP-A-origin exception or
 disposed-actor access was observed in the accepted runs.
 
+## Upstream maintenance regression checks
+
+The creation-order and middle-click update was additionally exercised on GNOME
+46 and 51. The real-input suite checks the default middle-click setting, stable
+ordering through focus/settings changes and reconstruction after re-enable,
+and middle-click closing of one represented window while another remains open.
+The existing preview/menu/filter/disable checks run alongside these regressions.
+
 ## Reproduce native tests
 
 Use a disposable session or container with the matching Shell/GJS/St/Clutter,

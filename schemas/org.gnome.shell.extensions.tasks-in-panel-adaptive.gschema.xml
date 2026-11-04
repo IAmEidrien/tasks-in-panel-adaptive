@@ -51,6 +51,10 @@
       <default>true</default>
       <summary>Animate on close</summary>
     </key>
+    <key name="middle-click-close" type="b">
+      <default>true</default>
+      <summary>Close the represented window on task middle-click</summary>
+    </key>
     <key name="migration-complete" type="b">
       <default>false</default>
     </key>

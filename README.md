@@ -11,6 +11,9 @@ when an application has multiple visible tasks, every task shows its title to
 make those windows easy to distinguish. Turn dynamic display off to choose
 icons, window titles and application names individually.
 
+Tasks remain in window creation order across focus changes, settings updates and
+re-enabling the extension.
+
 Tasks show windows on the **active workspace** and the **panel's monitor** by
 default. Both filters are optional. Application grouping shows one representative
 per application, with all matching windows available in its preview. Grouping
@@ -28,7 +31,9 @@ available panel space and theme's minimum button size still apply.
 - **Primary click:** activate a window, or minimize it when already focused.
   In focused-window-only mode, open its application menu instead.
 - **Secondary click:** open GNOME's application menu.
-- **Middle click:** open another application window when supported.
+- **Middle click:** close the represented window. Grouped tasks close only that
+  window; other windows stay open. Turn off **Close window on middle-click** in
+  Tasks → Interaction to open another application window instead, when supported.
 - **Scroll over the container:** cycle through represented windows. This can be
   disabled in Container preferences.
 - **Keyboard:** focus tasks through GNOME's panel navigation; Space or Enter

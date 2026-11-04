@@ -38,6 +38,10 @@ export default class Probe extends Extension {
         await wait(600);
         const shown=()=>[...bar.tasks.values()].filter(t=>t.visible);
         check(shown().length===3,'three tasks visible');
+        const inCreationOrder=()=>{const seq=bar.box.get_children().filter(t=>!t.closing).map(t=>t.window.get_stable_sequence());return seq.every((v,i)=>i===0||seq[i-1]<v);};
+        check(inCreationOrder(),'initial tasks follow window creation order');
+        check(s.get_boolean('middle-click-close'),'middle click defaults to closing windows');
+        s.set_boolean('middle-click-close',false);
         check(Object.keys(Main.panel.statusArea).filter(k=>!statusKeys.includes(k)).length===1,'one status-area container only');
         check(shown().every(t=>t.titleLabel.visible),'duplicate apps show all titles');
         const a1=shown().find(t=>t.window.title==='TIP A1'), a2=shown().find(t=>t.window.title.startsWith('TIP A2')), b=shown().find(t=>t.window.title==='TIP B1');
@@ -48,6 +52,7 @@ export default class Probe extends Extension {
         GLib.file_set_contents(`${root}/widths.json`,JSON.stringify(shown().map(t=>({title:t.window.title,text:t.titleLabel.text,size:t.get_transformed_size(),preferred:t.get_preferred_width(-1),style:t.style}))));
         check(a1.get_preferred_width(-1)[1]<a2.get_preferred_width(-1)[1],'unlimited width keeps natural title widths');
         check(bar.tasks.get(a1.window)===a1,'settings retain task actors');
+        check(inCreationOrder(),'settings retain creation order');
         const backend=Clutter.get_default_backend?.()??global.stage.get_context().get_backend();
         const pointer=backend.get_default_seat().create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
         const move=(x,y)=>pointer.notify_absolute_motion(GLib.get_monotonic_time(),x,y);
@@ -70,6 +75,7 @@ export default class Probe extends Extension {
         const body=bar.preview.cards.get_first_child().get_last_child();await hover(body);await click();
         GLib.file_set_contents(`${root}/click-state.json`,JSON.stringify({focus:global.display.focus_window?.title,expected:previewWindow.title,preview:bar.preview.visible,pointer:global.get_pointer(),overview:Main.overview.visible}));
         check(global.display.focus_window===previewWindow&&!bar.preview.visible,'preview click activates real window');
+        check(inCreationOrder(),'focus changes retain creation order');
         s.set_string('hover-action','none');await wait(150);move(800,500);await wait(200);await hover(b);
         check(!bar.preview.visible,'None disables hover');
         const beforeRaise=global.display.focus_window;
@@ -123,6 +129,12 @@ export default class Probe extends Extension {
         check(!Main.panel.statusArea.tasksInPanelTaskbar,'container removed with preview open');
         check(!bar.preview.closeTimer&&!bar.refreshTimer&&bar.tasks.size===0,'disable cancels resources');
         Main.extensionManager.enableExtension(uuid);await wait(400);check(Main.extensionManager.lookup(uuid).state===1,'re-enable');
+        const rebuilt=Main.extensionManager.lookup(uuid).stateObj._bar;
+        const sequences=rebuilt.box.get_children().map(t=>t.window.get_stable_sequence());
+        check(sequences.length===2&&sequences[0]<sequences[1],'re-enable restores creation order after stacking changes');
+        s.set_boolean('middle-click-close',true);s.set_string('hover-action','none');await wait(150);await hover(rebuilt.tasks.get(a2.window));
+        pointer.notify_button(GLib.get_monotonic_time(),Clutter.BUTTON_MIDDLE,Clutter.ButtonState.PRESSED);await wait(50);pointer.notify_button(GLib.get_monotonic_time(),Clutter.BUTTON_MIDDLE,Clutter.ButtonState.RELEASED);await wait(350);
+        check(!rebuilt.tasks.has(a2.window)&&rebuilt.tasks.has(a1.window),'real middle click closes only represented window');
         Main.extensionManager.disableExtension(uuid);await wait(200);
         GLib.file_set_contents(`${root}/result.json`,JSON.stringify({pass:true,shell:Config.PACKAGE_VERSION,scale,monitors:Main.layoutManager.monitors.length,checks}));
     }

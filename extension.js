@@ -116,7 +116,12 @@ const Task = GObject.registerClass(class Task extends St.Button {
             (button === Clutter.BUTTON_PRIMARY && this.bar.options.focusedOnly)) {
             this.menu.toggle();
         } else if (button === Clutter.BUTTON_MIDDLE) {
-            if (this.app?.can_open_new_window()) this.app.open_new_window(global.get_current_time());
+            if (this.bar.options.middleClickClose) {
+                if (this.window.can_close()) this.window.delete(global.get_current_time());
+            } else if (this.app?.can_open_new_window()) {
+                this.app.open_new_window(global.get_current_time());
+                Main.overview.hide();
+            }
         } else if (button === Clutter.BUTTON_PRIMARY) {
             if (this.window.appears_focused && !Main.overview.visible && this.window.can_minimize()) this.window.minimize();
             else Main.activateWindow(this.window);
@@ -214,7 +219,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
             workspaceOnly: s.get_boolean('show-active-workspace'), monitorOnly: s.get_boolean('show-panel-monitor-only'),
             focusedOnly: s.get_boolean('show-focused-window'), group: s.get_boolean('group-windows'),
             monochrome: s.get_boolean('desaturate-icon'), maxWidth: s.get_int('button-width'),
-            animate: s.get_boolean('animate-on-close'), hover: s.get_string('hover-action'), delay: s.get_int('hover-delay'),
+            middleClickClose: s.get_boolean('middle-click-close'), animate: s.get_boolean('animate-on-close'), hover: s.get_string('hover-action'), delay: s.get_int('hover-delay'),
             scroll: s.get_boolean('container-scroll'), position: s.get_string('container-position'), weight: s.get_string('container-font-weight')};
         this.set_style(backgroundStyle(s.get_boolean('container-custom-background'),
             s.get_string('container-background-color'), this.options.weight));
@@ -238,11 +243,17 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
     refresh() {
         const windows = global.display.sort_windows_by_stacking(global.get_window_actors().map(a => a.meta_window)
             .filter(w => w && !this.closed.has(w) && w.window_type !== Meta.WindowType.MODAL_DIALOG));
-        for (const w of windows) if (!this.tasks.has(w)) {
+        // Presentation follows creation order; grouping still uses stacking order.
+        const ordered = [...windows].sort((a, b) => a.get_stable_sequence() - b.get_stable_sequence());
+        for (const w of ordered) if (!this.tasks.has(w)) {
             const task = new Task(this, w);
             this.tasks.set(w, task);
             this.box.add_child(task);
         }
+        ordered.forEach((w, index) => {
+            const task = this.tasks.get(w);
+            if (this.box.get_child_at_index(index) !== task) this.box.set_child_at_index(task, index);
+        });
         const workspace = global.workspace_manager.get_active_workspace();
         this.eligible = visibleWindows(windows, {...this.options, group: false}, workspace,
             this.monitor ?? Main.layoutManager.primaryIndex, global.display.focus_window, appKey);
@@ -291,7 +302,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
             if (Math.abs(this.scrollDelta) < 1) return Clutter.EVENT_STOP;
             step = Math.sign(this.scrollDelta); this.scrollDelta = 0;
         } else step = [Clutter.ScrollDirection.UP, Clutter.ScrollDirection.LEFT].includes(dir) ? -1 : 1;
-        const windows = [...this.tasks].filter(([_w, t]) => t.visible).map(([w]) => w);
+        const windows = this.box.get_children().filter(t => t.visible && !t.closing).map(t => t.window);
         if (windows.length < 2) return Clutter.EVENT_PROPAGATE;
         const current = windows.indexOf(global.display.focus_window);
         const next = windows[current < 0 ? (step > 0 ? 0 : windows.length - 1) : (current + step + windows.length) % windows.length];

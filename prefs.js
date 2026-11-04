@@ -66,6 +66,9 @@ export default class Preferences extends ExtensionPreferences {
         toggle(visibility, 'show-panel-monitor-only', 'Show on panel monitor only');
         toggle(visibility, 'group-windows', 'Group by application', 'Show one representative task. Previews include the matching filtered windows.');
         toggle(visibility, 'show-focused-window', 'Show focused window only', 'Primary click opens its application menu.');
+        const taskInteraction = group(tasks, 'Interaction');
+        toggle(taskInteraction, 'middle-click-close', 'Close window on middle-click',
+            'Close the represented window instead of opening another application window.');
         const hover = group(tasks, 'Hover');
         combo(hover, 'hover-action', 'Hover action', ['none', 'raise', 'preview'], ['None', 'Raise', 'Preview']);
         const delay = spin(hover, 'hover-delay', 'Hover delay', 'Milliseconds before raising a window or showing previews.', 0, 2000, 10);
