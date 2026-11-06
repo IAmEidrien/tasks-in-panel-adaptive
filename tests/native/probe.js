@@ -34,7 +34,10 @@ export default class Probe extends Extension {
         const info=Main.extensionManager.lookup(uuid);
         check(info.state===1,`enabled: ${info.error}`);
         const ext=info.stateObj, bar=ext._bar, s=ext.settings;
+        check(s.get_boolean('container-fill-space'),'fill is enabled by default');
         s.set_boolean('container-fill-space',true);await wait(200);
+        check(!bar.reactive&&!bar.track_hover&&bar.opacity===0&&bar.visible,'empty container is transparent and non-interactive without hiding actor');
+        check(bar.scroll({get_scroll_direction(){throw Error('empty scroll read');}})===Clutter.EVENT_PROPAGATE,'empty scrolling returns before inspecting input');
         check(bar.tasks.size===0&&bar.get_width()>40,'empty task list retains filled region');
         s.set_boolean('container-fill-space',false);await wait(150);
         if(GLib.getenv('TEST_POPUP_STRESS')) {
@@ -53,6 +56,7 @@ export default class Probe extends Extension {
         await wait(600);
         const shown=()=>bar.box.get_children().filter(t=>t.visible&&!t.closing);
         check(shown().length===3,'three tasks visible');
+        check(bar.opacity===255&&bar.reactive&&bar.track_hover,'tasks restore visible interactive container');
         s.set_int('button-width',120);
         s.set_boolean('container-fill-space',true);await wait(300);
         const region=actor=>actor.get_allocation_box();
@@ -66,9 +70,25 @@ export default class Probe extends Extension {
         check(Math.abs(bar.get_width()-filledWidth)<=1,'task presentation changes preserve filled container width');
         s.set_boolean('show-focused-window',false);
         for(const position of ['right','center','left']) {s.set_string('container-position',position);await wait(200);check(bar.get_width()>0,'fill supports '+position+' placement');}
+        // Restore the clock to center before checking the right-side boundary.
+        Main.panel._rightBox.remove_child(date);Main.panel._centerBox.insert_child_at_index(date,dateIndex);
+        s.set_string('container-position','right');await wait(250);
+        const centerEnd=region(Main.panel._centerBox).x2;
+        check(region(Main.panel._rightBox).x1>=centerEnd-1,'right fill does not overlap centered clock');
+        const rightWidth=bar.get_width();
+        s.set_boolean('show-focused-window',true);await wait(200);
+        check(Math.abs(bar.get_width()-rightWidth)<=1,'right fill stays stable across task presentation changes');
+        s.set_boolean('show-focused-window',false);
+        s.set_boolean('show-active-workspace',true);
+        const originalWorkspace=global.workspace_manager.get_active_workspace();
+        global.workspace_manager.get_workspace_by_index(1).activate(global.get_current_time());await wait(350);
+        check(!bar.hasTasks&&bar.opacity===0&&!bar.reactive&&Math.abs(bar.get_width()-rightWidth)<=1,'empty workspace hides right container without losing allocation');
+        originalWorkspace.activate(global.get_current_time());await wait(350);
+        check(bar.hasTasks&&bar.reactive&&bar.opacity===255,'returning workspace restores right container');
+        s.set_string('container-position','left');await wait(200);
+
         s.set_boolean('container-fill-space',false);await wait(200);
         check(bar.fillParent===null&&!bar.container.x_expand,'turning fill off releases allocation constraint');
-        Main.panel._rightBox.remove_child(date);Main.panel._centerBox.insert_child_at_index(date,dateIndex);
         s.set_int('button-width',-1);await wait(200);
 
         const inCreationOrder=()=>{const seq=bar.box.get_children().filter(t=>!t.closing).map(t=>t.window.get_stable_sequence());return seq.every((v,i)=>i===0||seq[i-1]<v);};

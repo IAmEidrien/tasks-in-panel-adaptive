@@ -2,6 +2,7 @@
  * GPLv3; upstream attribution and license are preserved in LICENSE/LICENSING.md.
  * Adaptive task/container implementation maintained by Eidrien.
  */
+import Atk from 'gi://Atk';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
@@ -192,6 +193,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         this.closed = new WeakSet();
         this.overviewOrder = new Map();
         this.can_focus = false;
+        this.taskRole = this.accessible_role;
         // Retain PanelMenu registration, without its button/theme feedback.
         this.remove_style_class_name('panel-button');
         this.add_style_class_name('tip-container');
@@ -320,6 +322,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
             const task = this.tasks.get(w);
             if (this.box.get_child_at_index(index) !== task) this.box.set_child_at_index(task, index);
         });
+        this.syncPresence(shown.length > 0);
         const titles = needsTitles(shown, appKey);
         for (const [w, task] of this.tasks) {
             task.visible = shown.includes(w);
@@ -328,6 +331,20 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
                 if (this.preview.source === task) this.preview.close();
             }
             task.render(titles);
+        }
+    }
+
+    syncPresence(hasTasks) {
+        this.hasTasks = hasTasks;
+        // Keep visible/mapped and allocated: hiding the actor would collapse fill.
+        this.opacity = hasTasks ? 255 : 0;
+        this.reactive = hasTasks;
+        this.track_hover = hasTasks;
+        this.accessible_role = hasTasks ? this.taskRole : Atk.Role.REDUNDANT_OBJECT;
+        if (!hasTasks) {
+            this.remove_style_pseudo_class('hover');
+            this.scrollDelta = 0;
+            this.stopHover();
         }
     }
 
@@ -355,7 +372,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
     }
 
     scroll(event) {
-        if (!this.options.scroll) return Clutter.EVENT_PROPAGATE;
+        if (!this.hasTasks || !this.options.scroll) return Clutter.EVENT_PROPAGATE;
         const dir = event.get_scroll_direction();
         let step;
         if (dir === Clutter.ScrollDirection.SMOOTH) {

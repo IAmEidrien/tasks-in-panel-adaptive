@@ -148,3 +148,16 @@ The fill/compact-preview candidate passed native GNOME 46.0 (77 checks) and
 GNOME 51.0 (75 checks). Empty-container and active-constraint cleanup checks
 were additionally included in the final GNOME 46 run. This update did not repeat
 the historical 47–50, V-Shell or multi-monitor runs described above.
+
+
+## Adaptive empty-container behavior
+
+Filling now defaults to on; GSettings still honors explicit saved choices.
+The native probe checks that empty containers remain visible/mapped and allocated
+with zero opacity, no reactive/hover surface, and no scroll-input inspection.
+Displayed tasks restore interaction; minimized windows remain in the normal task
+eligibility policy. Empty actors use the redundant accessibility role.
+Right placement now has explicit centered-clock boundary, width-stability and
+empty-workspace/return checks, alongside the existing left-side checks.
+
+This update passed GNOME 46.0 (85 checks) and GNOME 51.0 (85 checks).
