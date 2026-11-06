@@ -37,6 +37,8 @@ export default class Preferences extends ExtensionPreferences {
         const container = page('Container', 'view-list-symbolic');
         const appearance = group(container, 'Appearance', 'Customize only the task container. The rest of the panel follows its own theme.');
         combo(appearance, 'container-position', 'Position', ['left', 'center', 'right'], ['Left', 'Center', 'Right']);
+        toggle(appearance, 'container-fill-space', 'Fill available space',
+            'Keep the container expanded while tasks retain their natural sizes.');
         combo(appearance, 'container-font-weight', 'Font weight', ['theme', 'normal', 'bold'], ['Follow theme', 'Normal', 'Bold']);
         const custom = toggle(appearance, 'container-custom-background', 'Custom background');
         const colorRow = new Adw.ActionRow({title: 'Background color'});

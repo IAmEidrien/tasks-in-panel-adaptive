@@ -20,15 +20,15 @@
 #panel .panel-button.tip-task:hover, #panel .panel-button.tip-task:focus { background-color: rgba(127,127,127,0.12); box-shadow: none; }
 #panel .panel-button.tip-task StLabel { margin: 0 5px; }
 .tip-preview-popup .tip-previews .tip-preview-cards { spacing: 12px; }
-.tip-preview-popup .tip-previews .tip-preview-card { spacing: 8px; }
-.tip-preview-popup .tip-previews .tip-preview-header { spacing: 8px; padding: 4px; }
+.tip-preview-popup .tip-previews .tip-preview-card { spacing: 2px; }
+.tip-preview-popup .tip-previews .tip-preview-header { spacing: 6px; padding: 2px 4px; }
 .tip-preview-popup .tip-previews .tip-preview-title { min-width: 0; padding: 0; }
 .tip-preview-popup .tip-previews .tip-preview-title StLabel { text-overflow: ellipsis; }
-.tip-preview-popup .tip-previews .tip-preview-image { border-radius: 12px; padding: 8px; }
+.tip-preview-popup .tip-previews .tip-preview-image { border-radius: 12px; padding: 2px 8px 8px; }
 .tip-preview-popup .tip-previews .tip-preview-title:focus, .tip-preview-popup .tip-previews .tip-preview-image:focus { background-color: rgba(127,127,127,0.2); }
 .tip-preview-popup .tip-previews .tip-preview-close {
-  width: 46px;
-  height: 30px;
+  width: 2.1em;
+  height: 1.5em;
   min-width: 0;
   min-height: 0;
   padding: 0;

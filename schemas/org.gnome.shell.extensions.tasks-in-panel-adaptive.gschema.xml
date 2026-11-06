@@ -1,6 +1,10 @@
 <?xml version='1.0' encoding='utf-8'?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.tasks-in-panel-adaptive" path="/org/gnome/shell/extensions/tasks-in-panel-adaptive/">
+    <key type="b" name="container-fill-space">
+      <default>false</default>
+      <summary>Expand the container into unused panel space</summary>
+    </key>
     <key type="b" name="dynamic-task-display">
       <default>true</default>
       <summary>Show window titles only when visible tasks contain duplicate applications</summary>

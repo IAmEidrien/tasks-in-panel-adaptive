@@ -74,9 +74,11 @@ and lifecycle checks continue to run alongside these checks.
 Preview-height controls are checked for visibility in Preview versus Raise/None,
 settings binding and the 160-pixel default. Live tests exercise both range limits
 (80/320), grouped layouts and monitor bounds after resizing. The close target
-is checked at 48×32 logical pixels, alongside its 3:2 proportions.
+is checked for a usable allocation and approximately 3:2 proportions; its dimensions
+now follow the theme font (2.1em × 1.5em before borders).
 
-The thumbnail inset is verified at 8 logical pixels per side, with a 12-pixel
+The thumbnail inset is verified at 8 logical pixels on the sides and bottom,
+with a reduced 2-pixel top inset and a 12-pixel
 rounded mask and aspect-preserving allocation. A generic popup-button theme
 stress rule checks that the close target retains its outline and background.
 
@@ -127,3 +129,22 @@ GSETTINGS_BACKEND=memory GTK_A11Y=none dbus-run-session -- \
 
 The preferences runner requires the installed GNOME Extensions preferences
 resource and Shell typelibs/library search paths appropriate to the distribution.
+
+
+## Fill-space layout and compact preview spacing
+
+The optional container fill uses a removable allocation constraint on its panel
+section. Centered widgets retain GNOME's work-area-adjusted position; the opposite
+section retains its requested space. No panel style, clock placement or allocation
+method is replaced. Task buttons do not expand with the container.
+
+Native tests cover an empty filled container, the centered clock boundary,
+empty-center layout, presentation stability, all three placements, toggling off,
+and removal of an active constraint on disable. Preview checks retain rounded
+thumbnails and side/bottom insets while using a tighter top inset and a smaller,
+font-relative close target. Screenshots are inspected outside the repository.
+
+The fill/compact-preview candidate passed native GNOME 46.0 (77 checks) and
+GNOME 51.0 (75 checks). Empty-container and active-constraint cleanup checks
+were additionally included in the final GNOME 46 run. This update did not repeat
+the historical 47–50, V-Shell or multi-monitor runs described above.

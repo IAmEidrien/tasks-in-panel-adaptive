@@ -17,6 +17,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {migrate} from './settings.js';
 import {backgroundStyle, needsTitles, visibleWindows} from './policy.js';
 import {Preview} from './preview.js';
+import {PanelFillConstraint} from './panelFill.js';
 import {readOverviewOrder, orderedWindows} from './overviewOrder.js';
 
 const STATUS_ID = 'tasksInPanelTaskbar';
@@ -201,6 +202,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         this.readSettings();
         Main.panel.addToStatusArea(STATUS_ID, this, 99, this.options.position);
         this._placement = this.options.position;
+        this.syncFill();
         this.connect('scroll-event', (_actor, event) => this.scroll(event));
         this.connect('notify::allocation', () => {
             const monitor = Main.layoutManager.findMonitorForActor(this)?.index ?? Main.layoutManager.primaryIndex;
@@ -222,6 +224,25 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         if (Main.overview.visible) this.captureOverviewOrder();
     }
 
+    syncFill() {
+        if (this.fillParent) {
+            this.fillParent.remove_constraint(this.fillConstraint);
+            this.fillParent.queue_relayout();
+        }
+        this.fillParent = null;
+        this.fillConstraint = null;
+        const fill = this.settings.get_boolean('container-fill-space');
+        this.container.x_expand = fill;
+        this.x_expand = fill;
+        this.box.x_expand = fill;
+        if (fill) {
+            this.fillParent = this.container.get_parent();
+            this.fillConstraint = new PanelFillConstraint(Main.panel, this.options.position, Main.layoutManager);
+            this.fillParent.add_constraint(this.fillConstraint);
+        }
+        Main.panel.queue_relayout();
+    }
+
     readSettings() {
         const s = this.settings;
         this.options = {dynamic: s.get_boolean('dynamic-task-display'), icon: s.get_boolean('show-window-icon'),
@@ -240,6 +261,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
             Main.panel[`_${this.options.position}Box`].add_child(this.container);
             this._placement = this.options.position;
         }
+        if (this._placement) this.syncFill();
     }
 
     queueRefresh() {
@@ -354,6 +376,10 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
 
     destroy() {
         this.dead = true;
+        if (this.fillParent) this.fillParent.remove_constraint(this.fillConstraint);
+        this.fillParent = null;
+        this.fillConstraint = null;
+        Main.panel.queue_relayout();
         if (this.orderPaintSignal) global.stage.disconnect(this.orderPaintSignal);
         this.orderPaintSignal = 0;
         if (this.refreshTimer) GLib.source_remove(this.refreshTimer);

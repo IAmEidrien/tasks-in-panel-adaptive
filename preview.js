@@ -87,7 +87,7 @@ export class Preview {
         titleButton.set_style(`max-width: ${Math.max(24, width - 56)}px;`);
         titleButton.accessible_name = window.title || 'Untitled window';
         titleButton.connect('clicked', activate);
-        const close = new St.Button({child: new St.Icon({icon_name: 'window-close-symbolic', icon_size: 18}),
+        const close = new St.Button({child: new St.Icon({icon_name: 'window-close-symbolic', icon_size: 16}),
             can_focus: true, x_expand: false, y_expand: false,
             x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.CENTER,
             style_class: 'tip-preview-close', accessible_name: `Close ${window.title || 'window'}`});

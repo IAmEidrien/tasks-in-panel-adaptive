@@ -31,6 +31,13 @@ available. **Maximum task width** caps each button in logical pixels; **−1**
 means no configured maximum. Short titles retain their natural width, and the
 available panel space and theme's minimum button size still apply.
 
+**Fill available space**, under Container, optionally gives the container the
+unused panel space while task buttons retain their normal sizing and alignment.
+Centered widgets and the opposite panel section keep their space. With an empty
+center section, a left container reaches the right-side widgets. The allocated
+region remains even when no tasks are visible. Turn the option off for compact,
+content-sized placement (the default).
+
 ## Interaction
 
 - **Primary click:** activate a window, or minimize it when already focused.

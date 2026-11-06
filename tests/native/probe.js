@@ -34,6 +34,9 @@ export default class Probe extends Extension {
         const info=Main.extensionManager.lookup(uuid);
         check(info.state===1,`enabled: ${info.error}`);
         const ext=info.stateObj, bar=ext._bar, s=ext.settings;
+        s.set_boolean('container-fill-space',true);await wait(200);
+        check(bar.tasks.size===0&&bar.get_width()>40,'empty task list retains filled region');
+        s.set_boolean('container-fill-space',false);await wait(150);
         if(GLib.getenv('TEST_POPUP_STRESS')) {
             GLib.file_set_contents(`${root}/popup-stress.css`,'.popup-menu-boxpointer .popup-menu-content StButton { background-color: transparent; border: 0 solid transparent; border-radius: 0; padding: 0; } .popup-menu-content { border-radius: 24px; }');
             St.ThemeContext.get_for_stage(global.stage).get_theme().load_stylesheet(Gio.File.new_for_path(`${root}/popup-stress.css`));
@@ -50,6 +53,24 @@ export default class Probe extends Extension {
         await wait(600);
         const shown=()=>bar.box.get_children().filter(t=>t.visible&&!t.closing);
         check(shown().length===3,'three tasks visible');
+        s.set_int('button-width',120);
+        s.set_boolean('container-fill-space',true);await wait(300);
+        const region=actor=>actor.get_allocation_box();
+        check(region(Main.panel._leftBox).x2<=region(Main.panel._centerBox).x1+1,'fill preserves centered widgets');
+        await screenshot('filled-to-clock');
+        const date=Main.panel.statusArea.dateMenu.container, dateIndex=Main.panel._centerBox.get_children().indexOf(date);
+        Main.panel._centerBox.remove_child(date);Main.panel._rightBox.insert_child_at_index(date,0);await wait(300);
+        check(Math.abs(region(Main.panel._leftBox).x2-region(Main.panel._rightBox).x1)<=1,'empty center lets left container reach system widgets');
+        const filledWidth=bar.get_width();
+        s.set_boolean('show-focused-window',true);await wait(250);
+        check(Math.abs(bar.get_width()-filledWidth)<=1,'task presentation changes preserve filled container width');
+        s.set_boolean('show-focused-window',false);
+        for(const position of ['right','center','left']) {s.set_string('container-position',position);await wait(200);check(bar.get_width()>0,'fill supports '+position+' placement');}
+        s.set_boolean('container-fill-space',false);await wait(200);
+        check(bar.fillParent===null&&!bar.container.x_expand,'turning fill off releases allocation constraint');
+        Main.panel._rightBox.remove_child(date);Main.panel._centerBox.insert_child_at_index(date,dateIndex);
+        s.set_int('button-width',-1);await wait(200);
+
         const inCreationOrder=()=>{const seq=bar.box.get_children().filter(t=>!t.closing).map(t=>t.window.get_stable_sequence());return seq.every((v,i)=>i===0||seq[i-1]<v);};
         check(bar.overviewOrder.size>0||inCreationOrder(),'creation-order fallback before an overview layout is available');
         check(s.get_boolean('middle-click-close'),'middle click defaults to closing windows');
@@ -128,12 +149,12 @@ export default class Probe extends Extension {
             const mask=thumbnail.get_effect('tip-rounded-clip');
             check(!!mask&&mask.radius===12*scale,'live thumbnail has a prominent 12px rounded mask');
             const imageButton=card.get_last_child(),node=imageButton.get_theme_node();
-            check(node.get_horizontal_padding()>=16*scale&&node.get_vertical_padding()>=16*scale,'thumbnail has an 8px inset on each side');
+            check(node.get_horizontal_padding()>=16*scale&&node.get_vertical_padding()>=10*scale,'thumbnail retains side/bottom insets with a tighter top gap');
             const closeNode=close.get_theme_node();
             check(closeNode.get_background_color().alpha>=40&&closeNode.get_border_width(St.Side.TOP)>=scale,'close button keeps a visible background and outline');
             const [cw,ch]=close.get_transformed_size();
-            check(cw>=48*scale-1&&ch>=32*scale-1,'preview close button has an obvious 48 by 32 target');
-            check(cw/ch>=1.4&&cw/ch<=1.6,'preview close button keeps 3:2 shape');
+            check(cw>=24*scale&&ch>=20*scale,'preview close button retains a usable target');
+            check(cw/ch>=1.25&&cw/ch<=1.65,'preview close button keeps 3:2 shape');
             check(title.get_transformed_size()[0]<=200*scale&&card.get_transformed_size()[0]<=256*scale,'preview titles stay within compact cards');
         }
         await screenshot('grouped-preview');
@@ -197,7 +218,10 @@ export default class Probe extends Extension {
         check(bar.preview.source!==b&&!bar.tasks.has(b.window),'preview close button removes source clone and task');
         a2.window.minimize();await wait(250);bar.preview.open(a2,[a2.window]);await wait(150);
         check(bar.preview.visible&&a2.window.minimized,'minimized preview never unminimizes window');
+        s.set_boolean('container-fill-space',true);await wait(200);
+        const fillParent=bar.fillParent, fillConstraint=bar.fillConstraint;
         Main.extensionManager.disableExtension(uuid);await wait(300);
+        check(!fillParent.get_constraints().includes(fillConstraint),'disable removes active fill constraint');
         check(!Main.panel.statusArea.tasksInPanelTaskbar,'container removed with preview open');
         check(!bar.preview.closeTimer&&!bar.refreshTimer&&!bar.orderPaintSignal&&bar.tasks.size===0&&bar.overviewOrder.size===0,'disable cancels resources');
         Main.overview.show();await wait(1000);
