@@ -1,34 +1,37 @@
 # Licensing and provenance
 
-GPLv3 retained for the fork of fthx/tasks-in-panel. Upstream supplies
-the GPL version 3 text; no GPLv2 permission was found. This update does
-not assert an additional later-version option on upstream's behalf.
-The source credits fthx and GNOME light-style/power-profile work by
-Florian Muellner; those notices remain intact. Eidrien's modifications
-to the derived extension follow the same GPLv3 terms.
+Tasks in Panel Adaptive derives from [fthx/tasks-in-panel](https://github.com/fthx/tasks-in-panel).
+The upstream repository supplies the GNU GPL version 3 text. No permission to
+relicense that code under GPLv2 was found. The derived extension and preferences
+retain GPLv3 terms; [LICENSE](LICENSE) contains the complete text. Eidrien's
+modifications to derived code follow those terms.
 
-Source: https://github.com/fthx/tasks-in-panel
-License: https://github.com/fthx/tasks-in-panel/blob/main/LICENSE
+The independently implemented `policy.js`, `settings.js`, `preview.js`, `roundedClip.js` and `overviewOrder.js` are
+marked **MIT**. [COPYING](COPYING) contains that grant. It applies to those original
+modules, not to upstream code or GNOME Shell. MIT permits their use in the GPLv3
+extension; distribution of the combination must satisfy GPLv3's requirements.
 
-## GNOME distribution
+[Dash-to-Panel windowPreview.js](https://github.com/home-sweet-gnome/dash-to-panel/blob/c3aed934f927852a9ec28103e788d1954034bf4c/src/windowPreview.js)
+(GPL-2.0-or-later) was consulted as a behavioral reference for delayed previews,
+pointer transfer and window-frame clipping. Its implementation is not bundled.
+The preview module independently uses GNOME Shell/Clutter APIs.
 
-Where original sources are marked MIT, that grant does not cover GNOME Shell or other
-third-party components. MIT permits reuse in a GPL-covered combination;
-distribution of such a combination must also satisfy its applicable GPL terms.
-This does not turn GPL-covered third-party code into MIT code. GNOME extension
-review requires compatible terms and attribution, not the removal of permissive
-source licenses. Licensing alone does not establish extension-store readiness.
-
-Reference: https://gjs.guide/extensions/review-guidelines/review-guidelines.html#licensing
-Compatibility: https://www.gnu.org/licenses/gpl-faq.html#WhatDoesCompatMean
+Task creation-order handling and optional middle-click closing adapt upstream
+commits [0a0e7d3](https://github.com/fthx/tasks-in-panel/commit/0a0e7d31113ba414567bc1406b027ef67c3f9eb6)
+and [4c9edd2](https://github.com/fthx/tasks-in-panel/commit/4c9edd237b8c7c89f9f70c2f855b3f8b804872f7),
+respectively, under the same GPLv3 terms.
 
 ## Maintenance policy
 
-Eidrien authorizes MIT for original work wherever compatible. Prefer
-GPL-2.0-or-later when copyleft terms are needed and the provenance permits it.
-Never downgrade third-party GPLv3 code, remove attribution, or infer a license
-from a public repository or extension-store listing. Preserve file-specific
-licenses and notices. Audit new copied code, assets and bundled dependencies
-before including them. An API dependency is not itself a transfer of ownership.
-Previously distributed copies retain their original license grants; this change
-does not revoke them. Repository visibility and release versions are unchanged.
+Original work prefers MIT wherever compatible. GPL-2.0-or-later is the preferred
+fallback only when provenance permits it. Never downgrade GPLv3 code, remove
+required attribution, or infer licensing permission from public visibility.
+Audit copied code, assets and bundled dependencies individually. File-specific
+licenses remain authoritative; previously distributed grants are not revoked.
+
+GNOME Shell and other platform components retain their own licenses. Extension
+review requires compatible terms and attribution, not removal of permissive
+source licenses. Licensing alone does not establish extension-store readiness.
+
+References: [GNOME extension review](https://gjs.guide/extensions/review-guidelines/review-guidelines.html#licensing),
+[GPL compatibility](https://www.gnu.org/licenses/gpl-faq.html#WhatDoesCompatMean).
