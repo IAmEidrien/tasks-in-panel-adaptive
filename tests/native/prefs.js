@@ -22,8 +22,13 @@ app.connect('activate',()=>{try{
  check(s.get_boolean('dynamic-task-display')&&s.get_boolean('show-panel-monitor-only'),'adaptive defaults');
  check(!s.get_boolean('show-window-title')&&s.get_string('container-position')==='center'&&s.get_string('hover-action')==='none','explicit task preferences migrated');
  check(s.get_int('preview-height')===160&&!row('Preview height').visible,'preview height default and hidden for None');
+ check(row('Adaptive task display')&&!row('Dynamic task display'),'adaptive terminology');
+ check(s.get_int('minimum-title-characters')===3&&row('Minimum visible title characters').visible,'readability default and visibility');
+ row('Minimum visible title characters').value=7;check(s.get_int('minimum-title-characters')===7,'readability threshold control binding');
  check(!row('Show window icon').visible&&!row('Hover delay').visible,'contextual rows hidden');
  s.set_boolean('dynamic-task-display',false);check(row('Show window icon').visible,'fixed controls revealed');
+ check(!row('Minimum visible title characters').visible,'threshold hidden when manual titles are off');
+ s.set_boolean('show-window-title',true);check(row('Minimum visible title characters').visible,'threshold revealed for manual titles');
  s.set_string('hover-action','preview');check(row('Hover delay').visible,'shared preview delay revealed');
  check(row('Preview height').visible,'preview height revealed for Preview');
  s.set_string('hover-action','raise');check(!row('Preview height').visible&&row('Hover delay').visible,'preview height hidden for Raise');

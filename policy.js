@@ -15,10 +15,6 @@ export function visibleWindows(windows, {workspaceOnly, monitorOnly, focusedOnly
     return [...representatives.values()];
 }
 
-export function needsTitles(windows, appKey) {
-    return new Set(windows.map(appKey)).size < windows.length;
-}
-
 export function backgroundStyle(enabled, color, weight) {
     const valid = /^(#[\da-f]{3,8}|rgba?\([\d.,\s%]+\))$/i.test(color);
     return `${enabled && valid ? `background-color: ${color};` : ''}${weight !== 'theme' ? `font-weight: ${weight};` : ''}`;

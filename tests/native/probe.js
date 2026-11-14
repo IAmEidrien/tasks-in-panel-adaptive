@@ -18,6 +18,10 @@ export default class Probe extends Extension {
         for(let n=0;n<300&&Main.layoutManager._startingUp;n++)await wait(100);
         Main.overview.hide();
         await wait(1500);
+        const uiScale=Number(GLib.getenv('TEST_UI_SCALE')||'1');
+        St.ThemeContext.get_for_stage(global.stage).scale_factor=uiScale;
+        const cs=Clutter.Settings.get_default?.()??global.stage.get_context().get_settings();
+        cs.font_dpi=96*1024*uiScale;
         const themeVariant=GLib.getenv('TEST_THEME');
         if(themeVariant) {
             const bytes=Gio.resources_lookup_data(`/org/gnome/shell/theme/gnome-shell-${themeVariant}.css`,0);
@@ -57,6 +61,18 @@ export default class Probe extends Extension {
         const shown=()=>bar.box.get_children().filter(t=>t.visible&&!t.closing);
         check(shown().length===3,'three tasks visible');
         check(bar.opacity===255&&bar.reactive&&bar.track_hover,'tasks restore visible interactive container');
+        if (GLib.getenv('TEST_SUITE') === 'crowding') {
+            const {run} = await import('./crowding.js');
+            await run({bar, settings:s, check, wait, screenshot, root, scale});
+            Main.extensionManager.disableExtension(uuid); await wait(150);
+            check(!bar.layoutLater && !bar.revealPaintSignal && !bar.refreshTimer && !bar.metrics && !bar.displayed && bar.suppressed.size===0, 'disable clears layout callbacks and candidate/window references');
+            Main.extensionManager.enableExtension(uuid); await wait(250);
+            const rebuilt=Main.extensionManager.lookup(uuid).stateObj._bar;
+            check(rebuilt!==bar&&rebuilt.hasTasks&&rebuilt.view.hadjustment.value===0,'re-enable creates a clean functional viewport');
+            Main.extensionManager.disableExtension(uuid); await wait(100);
+            GLib.file_set_contents(`${root}/result.json`,JSON.stringify({pass:true,shell:Config.PACKAGE_VERSION,scale,suite:'crowding',checks}));
+            return;
+        }
         s.set_int('button-width',120);
         s.set_boolean('container-fill-space',true);await wait(300);
         const region=actor=>actor.get_allocation_box();
@@ -97,14 +113,14 @@ export default class Probe extends Extension {
         s.set_boolean('middle-click-close',false);
         check(!bar.has_style_class_name('panel-button'),'outer container has no panel-button styling');
         check(Object.keys(Main.panel.statusArea).filter(k=>!statusKeys.includes(k)).length===1,'one status-area container only');
-        check(shown().every(t=>t.titleLabel.visible),'duplicate apps show all titles');
+        check(shown().filter(t=>t.window.title.startsWith('TIP A')).every(t=>t.titleLabel.visible)&&!shown().find(t=>t.window.title==='TIP B1').titleLabel.visible,'adaptive titles distinguish ambiguous icons only');
         const a1=shown().find(t=>t.window.title==='TIP A1'), a2=shown().find(t=>t.window.title.startsWith('TIP A2')), b=shown().find(t=>t.window.title==='TIP B1');
         s.set_int('button-width',120);await wait(250);
         GLib.file_set_contents(`${root}/max-widths.json`,JSON.stringify(shown().map(t=>({title:t.window.title,size:t.get_transformed_size(),preferred:t.get_preferred_width(-1),box:t.box.get_preferred_width(-1),style:t.style}))));
         check(shown().every(t=>t.get_transformed_size()[0]<=120*scale+2),'maximum width enforced');
         s.set_int('button-width',-1);await wait(150);
         GLib.file_set_contents(`${root}/widths.json`,JSON.stringify(shown().map(t=>({title:t.window.title,text:t.titleLabel.text,size:t.get_transformed_size(),preferred:t.get_preferred_width(-1),style:t.style}))));
-        check(a1.get_preferred_width(-1)[1]<a2.get_preferred_width(-1)[1],'unlimited width keeps natural title widths');
+        check(bar.metrics.find(m=>m.id===a1).natural<bar.metrics.find(m=>m.id===a2).natural,'unlimited candidates preserve distinct natural title widths before crowding');
         check(bar.tasks.get(a1.window)===a1,'settings retain task actors');
         check(bar.overviewOrder.size>0||inCreationOrder(),'settings preserve creation-order fallback when no overview exists');
         const backend=Clutter.get_default_backend?.()??global.stage.get_context().get_backend();

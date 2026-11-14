@@ -14,7 +14,7 @@ class Repository(unittest.TestCase):
             archive = module.package(Path(directory))
             with ZipFile(archive) as zipped:
                 self.assertIsNone(zipped.testzip())
-                for file in ['schemas/gschemas.compiled','LICENSE','COPYING','preview.js','settings.js','policy.js']:
+                for file in ['schemas/gschemas.compiled','LICENSE','COPYING','preview.js','settings.js','policy.js','displayPolicy.js','iconIdentity.js','titleLayout.js']:
                     self.assertIn(file,zipped.namelist())
                 self.assertEqual(json.loads(zipped.read('metadata.json'))['uuid'],'tasks-in-panel-adaptive@eidrien.local')
                 self.assertFalse(any(file.startswith(('.git/','tests/')) for file in zipped.namelist()))

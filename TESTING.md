@@ -161,3 +161,75 @@ Right placement now has explicit centered-clock boundary, width-stability and
 empty-workspace/return checks, alongside the existing left-side checks.
 
 This update passed GNOME 46.0 (85 checks) and GNOME 51.0 (85 checks).
+
+## Task overflow and per-icon Adaptive titles
+
+The task viewport, title policy and measurement implementation are described in
+[TASK-LAYOUT.md](TASK-LAYOUT.md). README feature descriptions remain human-owned;
+[MAINTAINER-HANDOFF.md](MAINTAINER-HANDOFF.md) lists their outdated claims.
+
+Pure regressions cover shared-icon eligibility (including cross-application and
+fallback collisions), candidate width distribution, application-wide suppression,
+the restoration margin, complete-short-title restoration, and minimal/clamped
+focus reveal including oversized buttons. Filtering/grouping and overview-order
+tests continue to run separately. These tests do not establish native allocation
+behavior.
+
+Native runs use real GTK clients from three applications, including two different
+applications with the same displayed icon. The crowding suite grows from three
+to thirteen windows. A real neighboring panel actor adds allocation pressure while
+testing left/center/right placement, with filling both enabled and disabled. The
+suite checks usable icon targets, clipping, native fades, complete short titles,
+application-independent suppression, full accessible names, stable repeated
+refreshes, proportional fonts, combining marks/emoji graphemes, ellipsis exclusion,
+and icon-theme notification handling. Readability is checked against actual
+allocated Clutter text areas, not only against a measurement fixture. This caught
+both omitted child margins and fractional-font rounding in pre-allocation queries.
+
+Real virtual pointer/keyboard input covers vertical wheel switching, horizontal
+wheel and continuous scrolling, Shift+wheel, Alt+Tab, ordinary and rapid focus
+changes, overview activation, and preview-scroll isolation. Refresh/reorder
+preserves manual scrolling; window closure clamps the adjustment. Grouped focus,
+focused/workspace filtering, no-overflow propagation, disable/re-enable, and
+cleanup of added references/callbacks are checked. The existing interaction suite
+continues exercising task clicks, hover/preview transfers, context menus,
+keyboard actions, monitor filtering, closing/minimized windows and teardown.
+
+Accepted native coverage for this update:
+
+| Shell | Disposable environment | Coverage |
+| --- | --- | --- |
+| 46.0 | Nested Wayland, 1024×768, UI scale 1 | 85 interaction checks; 61 crowding checks |
+| 46.0 | Nested Wayland, 1920×1200, UI scale 2 | 61 crowding checks |
+| 50.1 | Headless Wayland, UI scale 1 | 61 crowding checks |
+| 51.0 | Headless Wayland, two 1024×768 monitors, UI scale 1 | 87 interaction checks; 61 crowding checks |
+
+The GNOME 46 GTK/libadwaita preferences runner additionally passes 17 checks,
+including the Adaptive label, preserved key/defaults, threshold binding and
+contextual visibility. The threshold hides in manual mode with window titles off.
+
+Reproduce the new suite alongside the existing one:
+
+```sh
+python3 tests/native/run.py --version 46 --suite interactions --output /tmp/tip-interactions
+python3 tests/native/run.py --version 46 --suite crowding --output /tmp/tip-crowding
+python3 tests/native/run.py --version 46 --suite crowding --scale 2 --output /tmp/tip-crowding-2x
+python3 tests/native/run.py --version 51 --suite crowding --multi-monitor --output /tmp/tip-crowding-51
+```
+
+These are real Shell/St/Pango allocations using llvmpipe software rendering,
+disabled Shell animations, and isolated settings. The scale fixture sets Shell's
+ThemeContext scale and Clutter font DPI; it does not establish mixed-DPI hardware
+or client-application HiDPI behavior. State-based waits allow compositor/input
+completion rather than assuming a fixed rendering latency. Screenshots and logs
+remain outside the repository. Final screenshot review includes native text
+allocation/readability and ordinary/grouped geometry.
+
+This update does not repeat native GNOME 47–49, Xorg, V-Shell, third-party theme,
+or external accessibility-tool testing. The historical results above remain
+historical coverage. Icon-theme notification and resolution are exercised;
+pixel-identical artwork in different files is intentionally not compared.
+Long daily sessions, unusual panel organizers, hardware touchpads and live
+mixed-DPI monitor changes remain desktop validation work. Promotion retains the
+existing current-head CI gates, seven-day quiet period and `do-not-merge` pause;
+this update is published only to `testing`.

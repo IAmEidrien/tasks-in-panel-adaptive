@@ -56,10 +56,12 @@ export default class Preferences extends ExtensionPreferences {
 
         const tasks = page('Tasks', 'focus-windows-symbolic');
         const display = group(tasks, 'Display');
-        const dynamic = toggle(display, 'dynamic-task-display', 'Dynamic task display',
-            'Use icons for distinct applications; show every title when an application has multiple visible tasks.');
+        const dynamic = toggle(display, 'dynamic-task-display', 'Adaptive task display',
+            'Show titles only for tasks sharing a displayed icon.');
         const fixed = [toggle(display, 'show-window-icon', 'Show window icon'),
             toggle(display, 'show-window-title', 'Show window title'), toggle(display, 'show-window-app', 'Show application name')];
+        const threshold = spin(display, 'minimum-title-characters', 'Minimum visible title characters',
+            'Hide an application’s task titles when fewer characters fit. Complete short titles remain visible.', 1, 12, 1);
         toggle(display, 'desaturate-icon', 'Monochrome icons');
         spin(display, 'button-width', 'Maximum task width', 'Logical pixels. −1 means no configured maximum; short titles keep their natural width.', -1, 4096, 1);
         toggle(display, 'animate-on-close', 'Animate closing tasks');
@@ -78,12 +80,14 @@ export default class Preferences extends ExtensionPreferences {
             'Maximum thumbnail height in logical pixels. Limited to fit the screen.', 80, 320, 10);
         const sync = () => {
             for (const row of fixed) row.visible = !dynamic.active;
+            threshold.visible = dynamic.active || s.get_boolean('show-window-title');
             colorRow.visible = custom.active;
             delay.visible = s.get_string('hover-action') !== 'none';
             previewHeight.visible = s.get_string('hover-action') === 'preview';
         };
         dynamic.connect('notify::active', sync); custom.connect('notify::active', sync);
         signals.push(s.connect('changed::hover-action', sync));
+        signals.push(s.connect('changed::show-window-title', sync));
         sync();
         window.connect('close-request', () => {for (const id of signals) s.disconnect(id); return false;});
     }

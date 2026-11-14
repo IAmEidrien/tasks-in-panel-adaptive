@@ -16,14 +16,17 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import {AppMenu} from 'resource:///org/gnome/shell/ui/appMenu.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {migrate} from './settings.js';
-import {backgroundStyle, needsTitles, visibleWindows} from './policy.js';
+import {backgroundStyle, visibleWindows} from './policy.js';
 import {Preview} from './preview.js';
-import {PanelFillConstraint} from './panelFill.js';
+import {PanelFillConstraint, fillRegion} from './panelFill.js';
+import {ambiguousIcons, candidateWidths, suppressedApplications, revealValue} from './displayPolicy.js';
+import {TitleMeasure, readableTitle} from './titleLayout.js';
+import {IconIdentity} from './iconIdentity.js';
 import {readOverviewOrder, orderedWindows} from './overviewOrder.js';
 
 const STATUS_ID = 'tasksInPanelTaskbar';
 const appFor = w => Shell.WindowTracker.get_default().get_window_app(w);
-const appKey = w => appFor(w)?.get_id() ?? w.get_wm_class() ?? w;
+const appKey = w => w ? appFor(w)?.get_id() ?? w.get_wm_class() ?? w : null;
 
 const Task = GObject.registerClass(class Task extends St.Button {
     _init(bar, window) {
@@ -55,6 +58,8 @@ const Task = GObject.registerClass(class Task extends St.Button {
         Main.panel.menuManager.addMenu(this.menu);
         this.connect('clicked', (_button, button) => this.activate(button || Clutter.BUTTON_PRIMARY));
         this.connect('notify::hover', () => this.onHover());
+        this.connect('key-focus-in', () => { this.bar.keyboardReveal = this; this.bar.revealPending = true; this.bar.queueReveal(); });
+        this.connect('notify::allocation', () => { if (this.bar.revealPending) this.bar.queueReveal(); });
         window.connectObject(
             'notify::title', () => this.bar.queueRefresh(),
             'notify::appears-focused', () => this.bar.queueRefresh(),
@@ -66,28 +71,28 @@ const Task = GObject.registerClass(class Task extends St.Button {
             'unmanaging', () => this.bar.removeWindow(window), this);
     }
 
-    render(showTitles) {
+    render(showTitles, suppressed = false) {
         const o = this.bar.options;
         const app = appFor(this.window);
         if (app !== this.app) {
+            this.app?.disconnectObject(this);
             this.app = app;
+            app?.connectObject('notify::icon', () => this.bar.queueRefresh(), this);
             this.menu.setApp(app);
-            this.icon.gicon = app?.icon ?? null;
         }
+        this.icon.gicon = app?.icon ?? null;
         const icon = o.dynamic || o.icon;
         const title = o.dynamic ? showTitles : o.title;
         const name = !o.dynamic && o.app;
         this.icon.visible = icon;
-        this.titleLabel.visible = title || name;
-        if (!title && !name) this.add_style_class_name('tip-task-icon-only');
-        else this.remove_style_class_name('tip-task-icon-only');
-        this.titleLabel.text = [title ? this.window.title || 'Untitled window' : '', name ? app?.get_name() : ''].filter(Boolean).join(' — ');
+        this.titleEligible = title;
+        this.candidateTitle = title ? this.window.title || 'Untitled window' : '';
+        this.candidateText = [this.candidateTitle, name ? app?.get_name() : ''].filter(Boolean).join(' — ');
+        this.appKey = appKey(this.window);
+        this.labelEligible = title || name;
+        this.setSuppressed(suppressed);
+        this.titleLabel.text = this.candidateText;
         this.accessible_name = this.window.title || app?.get_name() || 'Window';
-        // St CSS max-width limits content; account for theme padding/borders
-        // so the setting describes the entire task target, also at HiDPI.
-        const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
-        const decoration = this.get_theme_node().adjust_preferred_width(0, 0)[1] / scale;
-        this.set_style(o.maxWidth >= 0 ? `max-width: ${Math.max(0, o.maxWidth - decoration)}px;` : null);
         this.titleLabel.set_style(o.weight === 'theme' ? null : `font-weight: ${o.weight};`);
         if (this._monochrome !== o.monochrome) {
             this.icon.clear_effects();
@@ -99,6 +104,16 @@ const Task = GObject.registerClass(class Task extends St.Button {
         this.box.opacity = focused || this.hover || this.has_key_focus() ? 255 : 160;
         if (focused) this.add_style_pseudo_class('active');
         else this.remove_style_pseudo_class('active');
+    }
+
+    setSuppressed(suppressed) {
+        const visible = !suppressed && this.labelEligible;
+        if (this.titleLabel.visible !== visible) this.titleLabel.visible = visible;
+        if (this.iconOnly !== !visible) {
+            this.iconOnly = !visible;
+            if (this.iconOnly) this.add_style_class_name('tip-task-icon-only');
+            else this.remove_style_class_name('tip-task-icon-only');
+        }
     }
 
     handleKey(symbol) {
@@ -171,6 +186,8 @@ const Task = GObject.registerClass(class Task extends St.Button {
         this.dead = true;
         this.cancelHover();
         this.window.disconnectObject(this);
+        this.app?.disconnectObject(this);
+        this.titleMetrics = this.titleMetricsKey = null;
         if (this.bar.preview.source === this) this.bar.preview.close();
         this.menu.close(Number(Config.PACKAGE_VERSION.split('.')[0]) >= 51 ? {animate: false} : 0);
         Main.panel.menuManager.removeMenu(this.menu);
@@ -199,19 +216,35 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         this.add_style_class_name('tip-container');
         this.track_hover = true;
         this.box = new St.BoxLayout({y_expand: true});
-        this.add_child(this.box);
+        this.view = new St.ScrollView({style_class: 'tip-task-scroll', clip_to_allocation: true,
+            hscrollbar_policy: St.PolicyType.EXTERNAL, vscrollbar_policy: St.PolicyType.NEVER,
+            x_expand: true, y_expand: true, enable_mouse_scrolling: false});
+        this.view.set_child(this.box);
+        this.add_child(this.view);
+        this.measure = new TitleMeasure(this);
+        this.identities = new IconIdentity();
+        this.suppressed = new Set();
+        this.revealPending = true;
         this.preview = new Preview();
         this.readSettings();
         Main.panel.addToStatusArea(STATUS_ID, this, 99, this.options.position);
         this._placement = this.options.position;
         this.syncFill();
-        this.connect('scroll-event', (_actor, event) => this.scroll(event));
+        this.connect('captured-event', (_actor, event) => event.type() === Clutter.EventType.SCROLL ? this.scroll(event) : Clutter.EVENT_PROPAGATE);
+        this.view.connect('notify::allocation', () => {
+            if (this.lastViewWidth !== this.view.width) {
+                this.lastViewWidth = this.view.width; this.revealPending = true; this.queueLayout();
+            }
+            if (this.revealPending) this.queueReveal();
+        });
+        this.view.connect('notify::mapped', () => { if (this.view.mapped && this.revealPending) this.queueReveal(); });
+        this.box.connect('notify::allocation', () => { if (this.revealPending) this.queueReveal(); });
         this.connect('notify::allocation', () => {
             const monitor = Main.layoutManager.findMonitorForActor(this)?.index ?? Main.layoutManager.primaryIndex;
             if (this.monitor !== monitor) { this.monitor = monitor; this.queueRefresh(); }
         });
         global.display.connectObject('window-created', () => this.queueRefresh(),
-            'notify::focus-window', () => this.queueRefresh(), this);
+            'notify::focus-window', () => { this.revealPending = true; this.keyboardReveal = null; this.queueRefresh(); }, this);
         global.window_manager.connectObject('map', () => this.queueRefresh(), this);
         global.workspace_manager.connectObject('active-workspace-changed', () => this.queueRefresh(), this);
         Main.layoutManager.connectObject('monitors-changed', () => { this.preview.close(); this.queueRefresh(); }, this);
@@ -222,6 +255,13 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         this.settingsSignal = settings.connect('changed', () => {
             this.stopHover(); this.readSettings(); this.queueRefresh();
         });
+        this.themeContext = St.ThemeContext.get_for_stage(global.stage);
+        this.themeContext.connectObject('changed', () => { this.identities.clear(); this.measure.invalidate(); this.revealPending = true; this.queueRefresh(); }, this);
+        St.TextureCache.get_default().connectObject('icon-theme-changed', () => { this.identities.clear(); this.measure.invalidate(); this.queueRefresh(); }, this);
+        for (const actor of [Main.panel, Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox])
+            actor.connectObject('notify::allocation', () => {
+                if (this.lastCapacity !== this.capacity()) this.queueLayout();
+            }, this);
         this.refresh();
         if (Main.overview.visible) this.captureOverviewOrder();
     }
@@ -253,7 +293,7 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
             focusedOnly: s.get_boolean('show-focused-window'), group: s.get_boolean('group-windows'),
             monochrome: s.get_boolean('desaturate-icon'), maxWidth: s.get_int('button-width'),
             middleClickClose: s.get_boolean('middle-click-close'), animate: s.get_boolean('animate-on-close'), hover: s.get_string('hover-action'), delay: s.get_int('hover-delay'),
-            previewHeight: s.get_int('preview-height'),
+            previewHeight: s.get_int('preview-height'), threshold: s.get_int('minimum-title-characters'),
             scroll: s.get_boolean('container-scroll'), position: s.get_string('container-position'), weight: s.get_string('container-font-weight')};
         this.set_style(backgroundStyle(s.get_boolean('container-custom-background'),
             s.get_string('container-background-color'), this.options.weight));
@@ -323,15 +363,94 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
             if (this.box.get_child_at_index(index) !== task) this.box.set_child_at_index(task, index);
         });
         this.syncPresence(shown.length > 0);
-        const titles = needsTitles(shown, appKey);
+        const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
+        const titles = ambiguousIcons(shown.map(w => ({id: w, icon: this.identities.get(appFor(w)?.icon, scale)})));
+        const members = new Set(shown);
+        if (!this.members || members.size !== this.members.size || shown.some(w => !this.members.has(w))) this.revealPending = true;
+        this.members = members;
+        this.displayed = shown.map(w => this.tasks.get(w));
         for (const [w, task] of this.tasks) {
             task.visible = shown.includes(w);
             if (!task.visible) {
                 task.cancelHover();
                 if (this.preview.source === task) this.preview.close();
             }
-            task.render(titles);
+            task.render(titles.has(w), this.suppressed.has(appKey(w)));
         }
+        this.metrics = this.displayed.map(t => this.measure.measure(t, this.options));
+        this.queueLayout();
+    }
+
+    capacity() {
+        const panel = Main.panel, width = panel.width;
+        const natural = box => {
+            const children = box.get_children().filter(c => c !== this.container && c.visible);
+            const [found, spacing] = box.get_theme_node().lookup_length('spacing', false);
+            return children.reduce((n, c) => n + c.get_preferred_width(-1)[1], 0) +
+                Math.max(0, children.length - (box === this.container.get_parent() ? 0 : 1)) * (found ? spacing : 0);
+        };
+        const left = natural(panel._leftBox), center = natural(panel._centerBox), right = natural(panel._rightBox);
+        const monitor = Main.layoutManager.findMonitorForActor(panel);
+        const work = monitor && Main.layoutManager.getWorkAreaForMonitor(monitor.index);
+        const offset = work ? 2 * (work.x - monitor.x) + work.width - monitor.width : 0;
+        const [a, b] = fillRegion(width, left, center, right, this.options.position,
+            panel.get_text_direction() === Clutter.TextDirection.RTL, offset);
+        const peers = this.options.position === 'left' ? left : this.options.position === 'right' ? right : center;
+        return Math.max(1, b - a - peers);
+    }
+
+    queueLayout() {
+        if (this.layoutLater || this.dead) return;
+        this.layoutLater = global.compositor.get_laters().add(Meta.LaterType.BEFORE_REDRAW, () => {
+            this.layoutLater = 0;
+            this.layoutTasks();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    layoutTasks() {
+        if (!this.metrics) return;
+        const scale = this.themeContext.scale_factor;
+        const capacity = this.capacity();
+        this.lastCapacity = capacity;
+        const style = `max-width: ${capacity / scale}px;`;
+        if (this.view.style !== style) this.view.style = style;
+        const available = this.settings.get_boolean('container-fill-space') && this.view.has_allocation()
+            ? Math.min(capacity, this.view.width) : capacity;
+        const widths = candidateWidths(this.metrics, available).map(Math.floor);
+        this.suppressed = suppressedApplications(this.metrics, widths, this.suppressed,
+            (m, w) => readableTitle(m, w, this.options.threshold), 2 * scale);
+        this.metrics.forEach((m, i) => {
+            if (m.id.dead || m.id.closing || !m.id.visible) return;
+            const suppressed = this.suppressed.has(m.app);
+            m.id.setSuppressed(suppressed);
+            const width = suppressed ? m.iconWidth : widths[i];
+            if (m.id.assignedWidth !== width) { m.id.assignedWidth = width; m.id.width = width; }
+        });
+        if (this.revealPending) this.queueReveal();
+    }
+
+    queueReveal() {
+        if (this.revealPaintSignal || this.dead) return;
+        // Geometry and adjustment bounds are only final after allocation. A
+        // single painted frame also covers focus changes that need no relayout.
+        this.revealPaintSignal = global.stage.connect('after-paint', () => {
+            global.stage.disconnect(this.revealPaintSignal);
+            this.revealPaintSignal = 0;
+            if (!this.revealPending || !this.view.mapped || this.view.width <= 0) return;
+            const focused = global.display.focus_window;
+            const keyboard = this.keyboardReveal;
+            const task = keyboard?.visible && !keyboard.dead && !keyboard.closing ? keyboard : this.displayed?.find(t =>
+                !t.dead && !t.closing && t.visible && (t.window === focused || focused?.get_transient_for() === t.window ||
+                (this.options.group && appKey(focused) === t.appKey)));
+            if (task && task.width > 0) {
+                const adj = this.view.hadjustment;
+                adj.value = revealValue(adj.value, adj.page_size, task.x, task.width, adj.upper);
+            }
+            this.revealPending = false;
+            this.keyboardReveal = null;
+        });
+        global.stage.queue_redraw();
     }
 
     syncPresence(hasTasks) {
@@ -372,8 +491,23 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
     }
 
     scroll(event) {
-        if (!this.hasTasks || !this.options.scroll) return Clutter.EVENT_PROPAGATE;
+        if (!this.hasTasks) return Clutter.EVENT_PROPAGATE;
         const dir = event.get_scroll_direction();
+        const [dx, dy] = dir === Clutter.ScrollDirection.SMOOTH ? event.get_scroll_delta() : [0, 0];
+        const horizontal = [Clutter.ScrollDirection.LEFT, Clutter.ScrollDirection.RIGHT].includes(dir) ||
+            (dir === Clutter.ScrollDirection.SMOOTH && Math.abs(dx) > Math.abs(dy));
+        const manual = horizontal || Boolean((event.get_state?.() ?? 0) & Clutter.ModifierType.SHIFT_MASK) || !this.options.scroll;
+        if (manual) {
+            const adj = this.view.hadjustment;
+            if (adj.upper <= adj.page_size + 0.5) return Clutter.EVENT_PROPAGATE;
+            if (event.is_pointer_emulated?.()) return Clutter.EVENT_STOP;
+            const delta = dir === Clutter.ScrollDirection.SMOOTH ? (horizontal ? dx : dy) :
+                [Clutter.ScrollDirection.UP, Clutter.ScrollDirection.LEFT].includes(dir) ? -1 : 1;
+            adj.adjust_for_scroll_event(delta);
+            this.stopHover();
+            return Clutter.EVENT_STOP;
+        }
+        if (event.is_pointer_emulated?.()) return Clutter.EVENT_STOP;
         let step;
         if (dir === Clutter.ScrollDirection.SMOOTH) {
             const [dx, dy] = event.get_scroll_delta();
@@ -383,7 +517,9 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
         } else step = [Clutter.ScrollDirection.UP, Clutter.ScrollDirection.LEFT].includes(dir) ? -1 : 1;
         const windows = this.box.get_children().filter(t => t.visible && !t.closing).map(t => t.window);
         if (windows.length < 2) return Clutter.EVENT_PROPAGATE;
-        const current = windows.indexOf(global.display.focus_window);
+        const focused = global.display.focus_window;
+        const current = windows.findIndex(w => w === focused || focused?.get_transient_for() === w ||
+            (this.options.group && appKey(w) === appKey(focused)));
         const next = windows[current < 0 ? (step > 0 ? 0 : windows.length - 1) : (current + step + windows.length) % windows.length];
         if (next === global.display.focus_window) return Clutter.EVENT_PROPAGATE;
         this.stopHover();
@@ -393,6 +529,17 @@ const TaskBar = GObject.registerClass(class TaskBar extends PanelMenu.Button {
 
     destroy() {
         this.dead = true;
+        if (this.layoutLater) global.compositor.get_laters().remove(this.layoutLater);
+        this.layoutLater = 0;
+        if (this.revealPaintSignal) global.stage.disconnect(this.revealPaintSignal);
+        this.revealPaintSignal = 0;
+        this.themeContext.disconnectObject(this);
+        St.TextureCache.get_default().disconnectObject(this);
+        for (const actor of [Main.panel, Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox])
+            actor.disconnectObject(this);
+        this.measure.destroy();
+        this.metrics = this.displayed = this.members = this.keyboardReveal = null;
+        this.suppressed.clear();
         if (this.fillParent) this.fillParent.remove_constraint(this.fillConstraint);
         this.fillParent = null;
         this.fillConstraint = null;

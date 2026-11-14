@@ -13,7 +13,8 @@
       "node",
       "--test",
       "tests/policy.test.mjs",
-      "tests/panelFill.test.mjs"
+      "tests/panelFill.test.mjs",
+      "tests/displayPolicy.test.mjs"
     ]
   ],
   "generic_package": false

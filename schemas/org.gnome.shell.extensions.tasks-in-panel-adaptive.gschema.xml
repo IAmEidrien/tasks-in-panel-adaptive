@@ -7,7 +7,11 @@
     </key>
     <key type="b" name="dynamic-task-display">
       <default>true</default>
-      <summary>Show window titles only when visible tasks contain duplicate applications</summary>
+      <summary>Show window titles only when visible tasks share displayed icons</summary>
+    </key>
+    <key type="i" name="minimum-title-characters">
+      <default>3</default><range min="1" max="12" />
+      <summary>Minimum visible title characters</summary>
     </key>
     <key type="b" name="show-window-icon">
       <default>true</default>
