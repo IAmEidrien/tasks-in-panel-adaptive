@@ -1,0 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Eidrien -->
+<!-- SPDX-License-Identifier: MIT -->
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <rect x="2" y="4" width="12" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path fill="currentColor" d="M4 6h2v4H4zm3 0h2v4H7zm3 0h2v4h-2z"/>
+</svg>

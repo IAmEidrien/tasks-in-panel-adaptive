@@ -233,3 +233,38 @@ Long daily sessions, unusual panel organizers, hardware touchpads and live
 mixed-DPI monitor changes remain desktop validation work. Promotion retains the
 existing current-head CI gates, seven-day quiet period and `do-not-merge` pause;
 this update is published only to `testing`.
+
+
+## Preferences page icons
+
+The Container and Tasks pages prefer `focus-top-bar-symbolic` and
+`view-dual-symbolic` from GTK's active icon theme. `preferenceIcons.js` registers
+one extension-local icon search directory per path, using private fallback names
+in `icons/hicolor`. The two original 16-unit SVGs use `currentColor`, so GTK's
+symbolic pipeline supplies foreground colors. The ZIP includes the theme index
+and both scalable assets; no resource compiler or new runtime dependency is needed.
+Each realized preferences window listens for icon-theme changes and disconnects
+on unrealize. Reopening resynchronizes the choice without duplicate registration.
+
+Native GTK4/libadwaita tests in the GNOME 46 container use an extracted ZIP,
+Adwaita, controlled native icon themes forcing each lookup path, light/dark
+schemes and GDK_SCALE 1/2. They check live changes, symbolic lookup, reopening,
+listener cleanup, actual GTK scale factors and rendered PNGs. PNG foreground
+colors were verified as dark in light mode and white in dark mode. Existing
+preferences regressions also pass. No missing-icon warnings occurred; expected
+container D-Bus/EGL fixture messages remain. Papirus is not installed, so a
+Papirus-specific native pass is not claimed. This presentation change does not
+require a new full Shell/window-management regression run.
+
+To reproduce after extracting the package and creating an output directory:
+
+```sh
+GSETTINGS_BACKEND=memory GTK_A11Y=none GDK_SCALE=1 dbus-run-session -- \
+  xvfb-run -a gjs -m tests/native/preferenceIcons.js /path/to/extracted /tmp/tip-icons
+GSETTINGS_BACKEND=memory GTK_A11Y=none GDK_SCALE=2 dbus-run-session -- \
+  xvfb-run -a gjs -m tests/native/preferenceIcons.js /path/to/extracted /tmp/tip-icons
+```
+
+README feature descriptions, settings, release numbering and promotion controls
+are unchanged. The original fallback assets are MIT-licensed as recorded in
+LICENSING.md.

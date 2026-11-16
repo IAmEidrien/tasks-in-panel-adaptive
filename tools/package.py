@@ -16,7 +16,8 @@ def package(output):
             (schema_dir/schema.name).write_bytes(schema.read_bytes())
         subprocess.run(['glib-compile-schemas', '--strict', str(schema_dir)], check=True)
         with ZipFile(archive, 'w', ZIP_DEFLATED) as zipped:
-            for file in [*ROOT.glob('*.js'), *ROOT.glob('*.css'), *ROOT.glob('schemas/*.gschema.xml'),
+            for file in [*ROOT.glob('*.js'), *ROOT.glob('*.css'), *ROOT.glob('icons/**/*.svg'),
+                         *ROOT.glob('icons/**/index.theme'), *ROOT.glob('schemas/*.gschema.xml'),
                          *[ROOT/name for name in ['metadata.json','LICENSE','COPYING','LICENSING.md','README.md']]]:
                 zipped.write(file, file.relative_to(ROOT))
             zipped.write(schema_dir/'gschemas.compiled', 'schemas/gschemas.compiled')

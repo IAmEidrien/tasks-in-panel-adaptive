@@ -5,6 +5,7 @@ import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 import {migrate} from './settings.js';
+import {bindPageIcons} from './preferenceIcons.js';
 
 export default class Preferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -34,7 +35,7 @@ export default class Preferences extends ExtensionPreferences {
                 adjustment: new Gtk.Adjustment({lower, upper, step_increment: step, page_increment: step * 10})});
             s.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT); g.add(row); return row;
         };
-        const container = page('Container', 'view-list-symbolic');
+        const container = page('Container', 'tip-a-container-symbolic');
         const appearance = group(container, 'Appearance', 'Customize only the task container. The rest of the panel follows its own theme.');
         combo(appearance, 'container-position', 'Position', ['left', 'center', 'right'], ['Left', 'Center', 'Right']);
         toggle(appearance, 'container-fill-space', 'Fill available space',
@@ -54,7 +55,11 @@ export default class Preferences extends ExtensionPreferences {
         const interactions = group(container, 'Interaction');
         toggle(interactions, 'container-scroll', 'Scroll to switch windows', 'Cycle through the tasks represented in this container.');
 
-        const tasks = page('Tasks', 'focus-windows-symbolic');
+        const tasks = page('Tasks', 'tip-a-tasks-symbolic');
+        bindPageIcons(window, this.dir, [
+            [container, 'focus-top-bar-symbolic', 'tip-a-container-symbolic'],
+            [tasks, 'view-dual-symbolic', 'tip-a-tasks-symbolic'],
+        ]);
         const display = group(tasks, 'Display');
         const dynamic = toggle(display, 'dynamic-task-display', 'Adaptive task display',
             'Show titles only for tasks sharing a displayed icon.');

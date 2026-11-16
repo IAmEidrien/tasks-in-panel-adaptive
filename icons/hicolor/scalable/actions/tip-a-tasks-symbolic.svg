@@ -1,0 +1,8 @@
+<!-- SPDX-FileCopyrightText: 2026 Eidrien -->
+<!-- SPDX-License-Identifier: MIT -->
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <g fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="2" y="3" width="4" height="10" rx="1"/>
+    <rect x="10" y="3" width="4" height="10" rx="1"/>
+  </g>
+</svg>

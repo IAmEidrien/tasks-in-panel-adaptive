@@ -7,7 +7,8 @@ retain GPLv3 terms; [LICENSE](LICENSE) contains the complete text. Eidrien's
 modifications to derived code follow those terms.
 
 The independently implemented `policy.js`, `settings.js`, `preview.js`, `roundedClip.js`, `overviewOrder.js`,
-`displayPolicy.js`, `iconIdentity.js` and `titleLayout.js` are
+`displayPolicy.js`, `iconIdentity.js`, `titleLayout.js`, `preferenceIcons.js` and the
+original SVGs in `icons/hicolor/scalable/actions/` are
 marked **MIT**. [COPYING](COPYING) contains that grant. It applies to those original
 modules, not to upstream code or GNOME Shell. MIT permits their use in the GPLv3
 extension; distribution of the combination must satisfy GPLv3's requirements.

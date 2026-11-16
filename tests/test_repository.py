@@ -18,6 +18,10 @@ class Repository(unittest.TestCase):
                     self.assertIn(file,zipped.namelist())
                 self.assertEqual(json.loads(zipped.read('metadata.json'))['uuid'],'tasks-in-panel-adaptive@eidrien.local')
                 self.assertFalse(any(file.startswith(('.git/','tests/')) for file in zipped.namelist()))
+                for file in ['preferenceIcons.js', 'icons/hicolor/index.theme',
+                             'icons/hicolor/scalable/actions/tip-a-container-symbolic.svg',
+                             'icons/hicolor/scalable/actions/tip-a-tasks-symbolic.svg']:
+                    self.assertIn(file, zipped.namelist())
     def test_workflow_identity(self):
         self.assertIn("github.repository == 'IAmEidrien/tasks-in-panel-adaptive'",(ROOT/'.github/workflows/promote-testing.yml').read_text())
         self.assertNotIn('You may merge',(ROOT/'.github/scripts/promote.cjs').read_text())

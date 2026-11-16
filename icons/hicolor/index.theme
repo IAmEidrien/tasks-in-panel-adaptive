@@ -1,0 +1,11 @@
+[Icon Theme]
+Name=TIP-A fallback icons
+Comment=Original symbolic preferences icons
+Directories=scalable/actions
+
+[scalable/actions]
+Size=16
+Type=Scalable
+MinSize=8
+MaxSize=512
+Context=Actions
